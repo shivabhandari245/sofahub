@@ -1,0 +1,195 @@
+body {
+  background: #f9f8f5;
+  animation: fadeIn 0.4s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.top-actions {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+  align-items: center;
+}
+
+.search-filter {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.search-filter input,
+.search-filter select {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.btn-add {
+  background: #b28a52;
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.btn-add:hover { background: #8d6b3b; }
+
+.add-form-container {
+  display: none;
+  animation: fadeIn 0.3s ease;
+  margin-bottom: 25px;
+}
+
+label {
+  font-weight: 500;
+  color: #333;
+  margin-top: 8px;
+  display: block;
+}
+
+input, select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  margin-top: 4px;
+}
+
+.status.paid { color: green; font-weight: 600; }
+.status.pending { color: orange; font-weight: 600; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+th, td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+th {
+  background: #fafafa;
+  font-weight: 600;
+}
+/* Pagination */
+.pagination-container {
+    margin-top: 15px;
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+.pagination-container .page-btn {
+    padding: 6px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--light-gray);
+    background: white;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.pagination-container .page-btn:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+.pagination-container .page-btn.btn-primary {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+@media (max-width: 768px) {
+  .search-filter { flex-direction: column; align-items: flex-start; }
+  table, thead, tbody, th, td, tr { display: block; }
+  thead { display: none; }
+  tr {
+    margin-bottom: 12px;
+    background: #fff;
+    border-radius: 8px;
+    padding: 10px;
+  }
+  td {
+    border: none;
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 10px;
+  }
+  td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #333;
+  }
+}
+/* Pagination */
+.page-btn btn-primary {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+} 
+.pagination-container {
+    margin-top: 15px;
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+.pagination-container .page-btn {
+    padding: 6px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--light-gray);          
+    background: white;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.pagination-container .page-btn:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);             
+}
+.pagination-container .page-btn.btn-primary {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);     
+}
+/* FIX Bootstrap Pagination */
+.pagination {
+    margin: 0;
+}
+
+.pagination .page-item {
+    margin: 0 3px;
+}
+
+.pagination .page-link {
+    padding: 6px 12px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background: white;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pagination .page-link:hover {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+.pagination .page-item.active .page-link {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}

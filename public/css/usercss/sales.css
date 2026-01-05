@@ -1,0 +1,152 @@
+body {
+  background: #f9f8f5;
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.top-actions {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.btn-add {
+  background: #d7b683;
+  color: #2e2e2e;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-add:hover {
+  background: #c9a76c;
+  color: #fff;
+}
+
+.search-filter {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.search-filter input {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+th {
+  background: #fafafa;
+  font-weight: 600;
+}
+
+tr:hover {
+  background-color: #f1f1f1;
+}
+
+.btn {
+  background: #d7b683;
+  color: #fff;
+  border: none;
+  padding: 7px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn.delete {
+  background: #b33a3a;
+}
+
+.btn.delete:hover {
+  background: #912e2e;
+}
+
+.add-form-container {
+  display: none;
+  animation: fadeIn 0.3s ease;
+  margin-bottom: 25px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+input:focus {
+  outline: none;
+  border-color: #5a4031;
+  box-shadow: 0 0 3px rgba(90,64,49,0.3);
+}
+
+@media (max-width: 768px) {
+  .search-filter { flex-direction: column; align-items: flex-start; }
+  table, thead, tbody, th, td, tr { display: block; }
+  thead { display: none; }
+  tr { margin-bottom: 15px; background: #fff; border-radius: 8px; padding: 10px; }
+  td { border: none; display: flex; justify-content: space-between; padding: 6px 10px; }
+  td::before { content: attr(data-label); font-weight: 600; color: #333; }
+  .navbar h1 { font-size: 1rem; }
+}
+@media (max-width: 480px) {
+  .btn-add {
+    width: 100%;
+    text-align: center;
+  }
+}
+.page-links {
+    margin-top: 15px;
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+.page-links .page-btn {
+    padding: 6px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--light-gray);
+    background: white;
+    cursor: pointer;      
+    transition: 0.2s;
+}.page-btn:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+.page-btn.btn-primary {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);   
+}

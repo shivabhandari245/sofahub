@@ -1,0 +1,242 @@
+/* ================= ROOT ================= */
+:root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+
+    --primary: #111827;
+    --primary-hover: #1f2937;
+
+    --success: #15803d;
+    --success-hover: #166534;
+
+    --danger: #b91c1c;
+    --danger-hover: #991b1b;
+}
+
+/* ================= BASE ================= */
+body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 0;
+    animation: fadeIn 0.35s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ================= CARDS ================= */
+.card {
+    background: var(--card);
+    padding: 24px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.04);
+    margin-bottom: 20px;
+    transition: all 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: 0 14px 30px rgba(0,0,0,0.06);
+}
+
+/* ================= HEADINGS ================= */
+h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+
+/* ================= ALERTS ================= */
+.alert {
+    padding: 14px 18px;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.alert-success {
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.alert-error {
+    background: #fef2f2;
+    color: #7f1d1d;
+    border: 1px solid #fecaca;
+}
+
+/* ================= BUTTONS ================= */
+.btn {
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.btn-black {
+    background: var(--primary);
+    color: #fff;
+}
+
+.btn-black:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+.btn-success {
+    background: var(--success);
+    color: #fff;
+}
+
+.btn-success:hover {
+    background: var(--success-hover);
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background: var(--danger-hover);
+}
+
+/* ================= FORMS ================= */
+form label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+form input,
+form select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    font-size: 0.85rem;
+    margin-bottom: 14px;
+    transition: all 0.2s ease;
+}
+
+form input:focus,
+form select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+}
+
+select[multiple] {
+    height: 120px;
+}
+
+/* ================= ROLE BADGES ================= */
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    background: #111827;
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-right: 4px;
+}
+
+/* ================= TABLE ================= */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+}
+
+th {
+    background: #f9fafb;
+    padding: 14px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+}
+
+td {
+    padding: 14px;
+    font-size: 0.85rem;
+    border-top: 1px solid var(--border);
+}
+
+tbody tr:hover {
+    background: #f9fafb;
+}
+
+/* ================= TOGGLE ================= */
+#userFormCard {
+    transition: all 0.3s ease;
+}
+
+/* ================= MOBILE ================= */
+@media (max-width: 768px) {
+    table, thead, tbody, th, td, tr {
+        display: block;
+    }
+
+    thead {
+        display: none;
+    }
+
+    tbody tr {
+        background: #fff;
+        border-radius: 12px;
+        margin-bottom: 14px;
+        padding: 14px;
+        box-shadow: 0 6px 14px rgba(0,0,0,0.05);
+    }
+
+    tbody td {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border: none;
+    }
+
+    tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--muted);
+    }
+}
+.hidden {
+    display: none;
+}
+.btn-primary {
+    background-color: #1f2937;
+    color: #fff;
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-weight: 500;
+    border: none;
+}
+
+.btn-primary:hover {
+    background-color: #111827;
+}
+

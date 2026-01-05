@@ -1,0 +1,521 @@
+.production-materials-container {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.page-title {
+    color: #2c3e50;
+    font-weight: 600;
+    margin: 0;
+}
+
+.batch-info {
+    display: flex;
+    gap: 10px;
+}
+
+.batch-badge, .quantity-badge {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.batch-badge {
+    background: #e3f2fd;
+    color: #1976d2;
+    border: 1px solid #bbdefb;
+}
+
+.quantity-badge {
+    background: #e8f5e8;
+    color: #2e7d32;
+    border: 1px solid #c8e6c9;
+}
+
+.materials-grid {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 24px;
+    align-items: start;
+}
+
+.section-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 24px;
+    overflow: hidden;
+}
+
+.section-card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px 24px;
+}
+
+.section-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-card-body {
+    padding: 24px;
+}
+
+.filter-group {
+    margin-bottom: 20px;
+}
+
+.filter-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.filter-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.table-section {
+    margin-top: 20px;
+}
+
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.table-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+}
+
+.table-subtitle {
+    font-size: 12px;
+    color: #666;
+}
+
+.table-container {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: auto; /* Changed from hidden to auto for horizontal scrolling */
+    max-height: 500px; /* Limit height and enable scrolling */
+}
+
+/* Available Materials Table - Full width */
+#availableMaterialsTable {
+    min-width: 800px; /* Ensure minimum width for all columns */
+}
+
+#availableMaterialsTable th,
+#availableMaterialsTable td {
+    white-space: nowrap;
+    padding: 10px 12px;
+}
+
+/* Allocated Materials Table - Optimized for right column */
+.selection-section .materials-table {
+    width: 100%;
+    table-layout: fixed; /* Fixed layout for consistent columns */
+}
+
+.selection-section .materials-table th,
+.selection-section .materials-table td {
+    padding: 10px 8px;
+    word-wrap: break-word;
+    vertical-align: middle;
+}
+
+/* Column widths for allocated materials */
+.selection-section .materials-table th:nth-child(1), /* Material */
+.selection-section .materials-table td:nth-child(1) {
+    width: 25%;
+    min-width: 80px;
+}
+
+.selection-section .materials-table th:nth-child(2), /* Category */
+.selection-section .materials-table td:nth-child(2) {
+    width: 20%;
+    min-width: 70px;
+}
+
+.selection-section .materials-table th:nth-child(3), /* Qty Used */
+.selection-section .materials-table td:nth-child(3) {
+    width: 15%;
+    min-width: 60px;
+    text-align: center;
+}
+
+.selection-section .materials-table th:nth-child(4), /* Unit Cost */
+.selection-section .materials-table td:nth-child(4) {
+    width: 15%;
+    min-width: 70px;
+    text-align: right;
+}
+
+.selection-section .materials-table th:nth-child(5), /* Total Cost */
+.selection-section .materials-table td:nth-child(5) {
+    width: 15%;
+    min-width: 80px;
+    text-align: right;
+}
+
+.selection-section .materials-table th:nth-child(6), /* Action */
+.selection-section .materials-table td:nth-child(6) {
+    width: 10%;
+    min-width: 50px;
+    text-align: center;
+}
+
+.materials-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.table-head {
+    background: #f8f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.table-head th {
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: #555;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 13px;
+}
+
+.table-body td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 13px;
+}
+
+.table-body tr:hover {
+    background: #f8f9fa;
+}
+
+.table-empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+    font-style: italic;
+}
+
+.table-empty-state i {
+    font-size: 24px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.selected-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.selected-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+}
+
+.selected-count {
+    font-size: 12px;
+    color: #666;
+    background: #f0f0f0;
+    padding: 4px 8px;
+    border-radius: 12px;
+}
+
+/* Button styles for action column */
+.btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+}
+
+.btn-sm {
+    padding: 4px 8px;
+    font-size: 11px;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn i {
+    font-size: 10px;
+}
+
+.summary-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.flexcostsummary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+.summary-item.total-cost {
+    background: #e3f2fd;
+    border-left-color: #1976d2;
+}
+
+.summary-label {
+    font-weight: 500;
+    color: #555;
+    font-size: 13px;
+}
+
+.summary-value {
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+}
+
+.expenses-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.form-group {
+    margin-bottom: 0;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #555;
+    font-size: 13px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.btn-confirm {
+    flex: 1;
+    padding: 12px 24px;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.btn-secondary {
+    padding: 12px 24px;
+    font-size: 14px;
+}
+
+.allocate-row-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.table-active {
+    background-color: rgba(25, 135, 84, 0.05) !important;
+}
+
+.badge {
+    font-size: 0.7em;
+    padding: 4px 8px;
+    border-radius: 10px;
+}
+
+/* Modal styles */
+.modal-header {
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-footer {
+    border-top: 1px solid #e0e0e0;
+}
+
+/* Text alignment helpers */
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.text-left {
+    text-align: left;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .materials-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .flexcostsummary {
+        grid-template-columns: 1fr;
+    }
+    
+    .expenses-inputs {
+        grid-template-columns: 1fr;
+    }
+    
+    .selection-section .materials-table {
+        table-layout: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .selection-section .materials-table th,
+    .selection-section .materials-table td {
+        padding: 8px 6px;
+        font-size: 12px;
+    }
+    
+    .btn {
+        padding: 4px 6px;
+        font-size: 11px;
+    }
+    
+    .btn i {
+        font-size: 9px;
+    }
+}
+
+/* Scrollbar styling for table container */
+.table-container::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.table-empty-state {
+    color: #6c757d;
+    font-style: italic;
+    text-align: center;
+    padding: 2rem !important;
+}
+
+.table-empty-state i {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    display: block;
+}

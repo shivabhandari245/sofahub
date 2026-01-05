@@ -1,0 +1,229 @@
+:root {
+    --primary: #2c3e50 ;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --light: #f8fafc;
+    --dark: #1e293b;
+    --gray: #64748b;
+    --light-gray: #e2e8f0;
+}
+
+/* Reset & global styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+body {
+    background-color: #f1f5f9;
+    color: var(--dark);
+    line-height: 1.5;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Card style */
+.card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    padding: 25px;
+    margin-bottom: 25px;
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+
+h2 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: var(--dark);
+}
+
+/* Form */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+}
+
+label {
+    font-weight: 500;
+    font-size: 14px;
+    margin-bottom: 5px;
+    color: var(--dark);
+}
+
+input, select, textarea {
+    padding: 10px 12px;
+    border: 1px solid var(--light-gray);
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    background-color: #fdfdfd;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+    outline: none;
+}
+
+/* Purchase summary */
+.purchase-summary {
+    background: #f8fafc;
+    border: 1px solid var(--light-gray);
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.purchase-summary h3 {
+    font-size: 16px;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.purchase-summary p {
+    margin-bottom: 6px;
+    font-size: 14px;
+}
+
+/* Buttons */
+.btn {
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-success { 
+    background-color: var(--success); 
+    color: white; 
+}
+.btn-success:hover { 
+    background-color: #0f9d74; 
+}
+
+.btn-outline { 
+    background: transparent; 
+    border: 1px solid var(--primary); 
+    color: var(--primary); 
+}
+.btn-outline:hover { 
+    background: var(--primary); 
+    color: white; 
+}
+
+/* Purchases list items */
+#purchasesList .purchase-item {
+    padding: 15px;
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    margin-bottom: 12px;
+    transition: all 0.2s ease;
+}
+
+#purchasesList .purchase-item:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+#purchasesList .purchase-item h5 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+#purchasesList .purchase-item p {
+    font-size: 14px;
+    margin: 2px 0;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 25px 0;
+    color: var(--gray);
+}
+
+/* Table styles */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.table th, .table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--light-gray);
+    text-align: left;
+    font-size: 14px;
+}
+
+.table th {
+    background: var(--light);
+    font-weight: 600;
+}
+
+.badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+.bg-success { background: rgba(16,185,129,0.1); color: var(--success); }
+.bg-secondary { background: rgba(107,114,128,0.1); color: var(--gray); }
+
+/* Pagination */
+.pagination-container {
+    margin-top: 15px;
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+.pagination-container .page-btn {
+    padding: 6px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--light-gray);
+    background: white;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.pagination-container .page-btn:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+.pagination-container .page-btn.btn-primary {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+.text-muted {
+    color: var(--gray);
+        font-size: .875em;
+            --bs-text-opacity: 1;
+}   
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container { padding: 15px; }
+    input, select, textarea { padding: 8px 10px; font-size: 13px; }
+    .btn { width: 100%; font-size: 13px; padding: 9px 0; }
+    .purchase-summary { font-size: 13px; padding: 12px; }
+}

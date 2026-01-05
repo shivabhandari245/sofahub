@@ -1,0 +1,94 @@
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.summary-card {
+  background: #fff;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+.summary-card:hover { transform: translateY(-3px); }
+
+.summary-card h3 { margin: 0; font-size: 1.05rem; color: #333; }
+.summary-card p { margin: 8px 0 0; font-size: 1.3rem; font-weight: bold; }
+/* Welcome card specific styling */
+.card h2 {
+    color: #2c3e50;
+    font-weight: 700;
+    margin-bottom: 15px;
+}
+
+.card p {
+    color: #6c757d;
+    line-height: 1.6;
+}
+.top-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  gap: 10px;
+}
+
+.search-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.add-form-container { display: none; animation: fadeIn 0.3s ease; margin-bottom: 25px; }
+.inline-input { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; }
+
+.btn.save { background: #2e7d32; color: #fff; }
+.btn.cancel { background: #9e9e9e; color: #fff; }
+
+.table-container { overflow-x: auto; }
+.status.Active { color: #2e7d32; font-weight: 600; }
+.status.On-Leave, .status[data-status="On Leave"] { color: #f9a825; font-weight: 600; }
+.status.Inactive { color: #c62828; font-weight: 600; }
+
+tr.editing { background: #fff8e6; }
+tr:hover { background: #fffaf0; transition: background 0.2s; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .search-filter, .top-actions { flex-direction: column; align-items: stretch; }
+  .btn-add { width: 100%; }
+}
+
+@media (max-width: 720px) {
+  table { border: 0; }
+  thead { display: none; }
+  tbody tr {
+    display: block;
+    margin-bottom: 14px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 10px;
+  }
+  tbody td {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 6px;
+  }
+  tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #555;
+    flex-basis: 50%;
+  }
+}
