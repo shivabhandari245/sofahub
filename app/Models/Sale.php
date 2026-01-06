@@ -13,15 +13,19 @@ class Sale extends Model
     'tax_rate',      
     'tax_amount',    
     'discount',
+    'afterdiscount',
     'total_amount',
     'profit',
-    'status'
+    'status',
+    'payment_method',    
+        'payment_remarks',
 ];
 
 
 
 
     protected $casts = [
+    'payment_method' => 'array',
     'date' => 'datetime',
     'returned_at' => 'datetime',
 ];
