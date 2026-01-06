@@ -1,13 +1,12 @@
 <?php
-
 namespace App\Http\Controllers\User;
-
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\ProductModel;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
@@ -47,7 +46,9 @@ class DashboardController extends Controller
         // Calculate Growth
         $thisMonth = $monthlySales[now()->month] ?? 0;
         $lastMonth = $monthlySales[now()->month - 1] ?? 0;
-        $growth = $lastMonth > 0 ? round((($thisMonth - $lastMonth) / $lastMonth) * 100, 2) : ($thisMonth > 0 ? 100 : 0);
+        $growth = $lastMonth > 0 
+            ? round((($thisMonth - $lastMonth) / $lastMonth) * 100, 2) 
+            : ($thisMonth > 0 ? 100 : 0);
 
         // Product Status
         $productStatus = [
@@ -68,6 +69,35 @@ class DashboardController extends Controller
             'Returned'  => $saleStatus['returned'] ?? 0,
         ];
 
+        // --- DAILY SALES ---
+        // Last 30 days
+        $startDate = Carbon::now()->subDays(30)->startOfDay();
+        $endDate = Carbon::now()->endOfDay();
+
+        $dailySalesRaw = Sale::where('user_id', $userId)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->selectRaw('DATE(date) as day, COUNT(*) as invoices, SUM(total_amount) as total')
+            ->groupBy('day')
+            ->orderBy('day', 'desc')
+            ->get();
+
+        $dailySales = [];
+        foreach ($dailySalesRaw as $sale) {
+            // Get top product for that day
+            $topProductDay = SaleItem::whereHas('sale', fn($q) => $q->where('user_id', $userId)->whereDate('date', $sale->day))
+                ->select('product_id', DB::raw('SUM(quantity) as qty'))
+                ->groupBy('product_id')
+                ->orderByDesc('qty')
+                ->with('product')
+                ->first();
+
+            $dailySales[$sale->day] = [
+                'invoices'    => $sale->invoices,
+                'total'       => $sale->total,
+                'top_product' => $topProductDay ? $topProductDay->product->name : 'N/A',
+            ];
+        }
+
         return view('user.userproducts.dashboard', compact(
             'totalSales',
             'totalInvoices',
@@ -75,7 +105,8 @@ class DashboardController extends Controller
             'growth',
             'monthlySales',
             'productStatus',
-            'saleStatus'
+            'saleStatus',
+            'dailySales'
         ));
     }
 
@@ -83,13 +114,11 @@ class DashboardController extends Controller
     {
         $userId = Auth::id();
         
-      
         return response()->json([
             'success' => true,
             'data' => [
                 'totalSales' => Sale::where('user_id', $userId)->sum('total_amount'),
                 'totalInvoices' => Sale::where('user_id', $userId)->count(),
-           
             ],
             'timestamp' => now()->toISOString()
         ]);
