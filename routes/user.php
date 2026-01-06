@@ -54,7 +54,6 @@ Route::post('sales/{sale}/return', [SaleController::class, 'return'])->name('sal
 Route::get('sales/{sale}', [SaleController::class, 'show'])->name('user.sales.show');
 Route::get('products/ajax', [SaleController::class, 'ajaxList'])->name('user.products.ajax');
 
-
  Route::get('/saleitems', [SaleItemController::class, 'index'])->name('saleitems.index');
 Route::post('/saleitems/return/{id}', [SaleItemController::class, 'returnItem'])->name('saleitems.return');
 
@@ -70,11 +69,9 @@ Route::get('customers/ajax-search', [SaleController::class, 'getCustomers'])->na
    
     // Products & Purchase
     Route::get('/products', [UserProductsController::class, 'index'])->name('user.products.index');
-Route::get('products/list', [UserProductsController::class, 'getProducts'])->name('user.products.list');
-    Route::get('products/stats', [UserProductsController::class, 'stats'])->name('user.products.stats');
-     Route::get('products/{id}/edit', [UserProductsController::class, 'edit'])->name('user.products.edit');
-    Route::put('products/{id}', [UserProductsController::class, 'update'])->name('user.products.update');
-    Route::delete('products/{id}', [UserProductsController::class, 'destroy'])->name('user.products.destroy');
+
+
+
     
 
     Route::get('/purchase', [UserPurchaseController::class, 'index'])->name('user.purchase.index');
@@ -83,14 +80,9 @@ Route::get('products/list', [UserProductsController::class, 'getProducts'])->nam
     Route::get('suppliers', [UserPurchaseController::class, 'getSuppliers'])->name('user.purchase.suppliers');
   Route::get('/purchase/latest', [UserPurchaseController::class, 'latestPurchases'])->name('user.purchase.latest');
 
-Route::get('/latest', [UserPurchaseController::class, 'latestPurchases'])->name('user.purchase.latest');
-
+    Route::get('/latest', [UserPurchaseController::class, 'latestPurchases'])->name('user.purchase.latest');
     Route::get('/purchase/{id}/edit', [UserPurchaseController::class, 'edit'])->name('purchase.edit');
-
-    // Update purchase
-    Route::put('/purchase/{id}', [UserPurchaseController::class, 'update'])->name('purchase.update');
-
-    // Delete purchase
+     Route::put('/purchase/{id}', [UserPurchaseController::class, 'update'])->name('purchase.update');  
     Route::delete('/purchase/{id}', [UserPurchaseController::class, 'destroy'])->name('purchase.destroy');
 
 // Invoices

@@ -1,6 +1,10 @@
 @extends('layouts.user')
 @section('title','Sale Items')
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
+@endpush
+
 @section('content')
 <div class="container mt-3">
 
@@ -11,17 +15,27 @@
                 <i class="fas fa-arrow-left"></i> Back
             </a>
         </div>
-        <p class="text-muted mb-0">View all sold products with quantity, subtotal and profit.</p>
+        <p class="text-muted mb-0">View all sold products with quantity, subtotal, and profit.</p>
     </div>
 
     @if(session('success'))
     <div class="alert alert-success mt-3">{{ session('success') }}</div>
     @endif
 
-    <div class="card mt-3">
-        <div class="table-responsive">
-            <table class="table table-bordered mb-0">
+    <div class="card mt-3 p-3">
+        <!-- Optional Status Filter -->
+        <div class="mb-2">
+            <label>Status Filter:</label>
+            <select id="filterStatus" class="form-select w-auto d-inline-block">
+                <option value="">All</option>
+                <option value="sold">Sold</option>
+                <option value="partially_returned">Partially Returned</option>
+                <option value="returned">Returned</option>
+            </select>
+        </div>
 
+        <div class="table-responsive">
+            <table id="saleItemsTable" class="table table-bordered table-hover">
                 <thead class="table-light">
                     <tr>
                         <th>Product ID</th>
@@ -36,10 +50,9 @@
                         <th>Actions</th>
                     </tr>
                 </thead>
-
-                <tbody id="saleItemsTable">
-                    @forelse($saleItems as $item)
-                    <tr class="sale-row">
+                <tbody>
+                    @foreach($saleItems as $item)
+                    <tr>
                         <td>{{ $item->product->id ?? '-' }}</td>
                         <td>#{{ $item->sale->id ?? '-' }}</td>
                         <td>{{ $item->product->name ?? '-' }}</td>
@@ -59,33 +72,15 @@
                             @endif
                         </td>
                     </tr>
-                    @empty
-                    <tr>
-                        <td colspan="10" class="text-center text-muted">No sale items found.</td>
-                    </tr>
-                    @endforelse
+                    @endforeach
                 </tbody>
-
-                <tfoot>
-                    <tr>
-                        <td colspan="10">
-                            <div class="d-flex justify-content-between align-items-center mt-3">
-                                <div class="text-muted" id="paginationInfo" style="color:#2c3e50 ;"></div>
-                                <nav>
-                                    <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
-                                </nav>
-                            </div>
-                        </td>
-                    </tr>
-                </tfoot>
-
             </table>
         </div>
     </div>
 </div>
 
 <!-- Return Modal -->
-<div class=" modal fade" id="returnModal" tabindex="-1">
+<div class="modal fade" id="returnModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <form method="POST" id="returnForm" class="modal-content">
             @csrf
@@ -109,66 +104,47 @@
 @endsection
 
 @push('scripts')
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+$(document).ready(function() {
+
+    // Initialize DataTable
+    const table = $('#saleItemsTable').DataTable({
+        paging: true,
+        searching: true,
+        info: true,
+        lengthChange: false,
+        pageLength: 5,
+        columnDefs: [
+            { orderable: false, targets: 9 } // Disable sorting on Actions
+        ]
+    });
+
+    // Status filter
+    $('#filterStatus').on('change', function () {
+        table.column(8).search(this.value).draw(); // Status column index = 8
+    });
 
     /* ================= RETURN MODAL ================= */
     const returnModal = new bootstrap.Modal(document.getElementById('returnModal'));
     const returnForm = document.getElementById('returnForm');
     const returnSubmitBtn = document.getElementById('returnSubmitBtn');
 
-    document.querySelectorAll('.return-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            returnForm.action =
-                `/user/saleitems/return/${btn.dataset.id}`;
-            returnForm.reset();
-            returnSubmitBtn.disabled = false;
-            returnSubmitBtn.innerText = 'Confirm';
-            returnModal.show();
-        });
+    $('#saleItemsTable').on('click', '.return-btn', function() {
+        const id = $(this).data('id');
+        returnForm.action = `/user/saleitems/return/${id}`;
+        returnForm.reset();
+        returnSubmitBtn.disabled = false;
+        returnSubmitBtn.innerText = 'Confirm';
+        returnModal.show();
     });
 
     returnForm.addEventListener('submit', function() {
         returnSubmitBtn.disabled = true;
         returnSubmitBtn.innerText = 'Processing...';
     });
-
-    /* ================= CLIENT PAGINATION ================= */
-    const rowsPerPage = 5;
-    const rows = document.querySelectorAll('.sale-row');
-    const pagination = document.getElementById('pagination');
-    const info = document.getElementById('paginationInfo');
-
-    let currentPage = 1;
-    const totalPages = Math.ceil(rows.length / rowsPerPage);
-
-    function showPage(page) {
-        currentPage = page;
-        const start = (page - 1) * rowsPerPage;
-        const end = start + rowsPerPage;
-
-        rows.forEach((row, index) => {
-            row.style.display = index >= start && index < end ? '' : 'none';
-        });
-
-        info.innerText =
-            `Showing ${Math.min(end, rows.length)} of ${rows.length} entries`;
-        renderPagination();
-    }
-
-    function renderPagination() {
-        pagination.innerHTML = '';
-        for (let i = 1; i <= totalPages; i++) {
-            pagination.innerHTML += `
-                <li class="page-item ${i === currentPage ? 'active' : ''}">
-                    <a class="page-link" href="#" onclick="event.preventDefault(); showPage(${i})">${i}</a>
-                </li>
-            `;
-        }
-    }
-
-    window.showPage = showPage;
-    showPage(1);
 });
 </script>
 @endpush

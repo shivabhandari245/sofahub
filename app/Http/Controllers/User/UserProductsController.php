@@ -6,71 +6,59 @@ use App\Http\Controllers\Controller;
 use App\Models\ProductModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Yajra\DataTables\Facades\DataTables;
 
 class UserProductsController extends Controller
 {
     public function index(Request $request)
     {
-        $user = Auth::user();
-
-        $query = ProductModel::where('user_id', $user->id);
-
-        
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('category', 'like', "%{$search}%")
-                  ->orWhere('quality', 'like', "%{$search}%");
-            });
-        }
-
-       
-        if ($request->filled('status') && $request->status !== 'all') {
-            if ($request->status == 'Available') {
-                $query->where('quantity', '>', 5);
-            } elseif ($request->status == 'Low') {
-                $query->whereBetween('quantity', [1,5]);
-            } elseif ($request->status == 'Out of Stock') {
-                $query->where('quantity', 0);
-            }
-        }
-
-       
-        if ($request->filled('source') && $request->source !== 'all') {
-            if ($request->source == 'admin') {
-                $query->where('source', 'like', '%Admin%');
-            } elseif ($request->source == 'purchased') {
-                $query->where('source', 'like', '%purchase%');
-            }
-        }
-
-      
-        $products = $query->orderBy('created_at', 'desc')->paginate(10);
-
-     
         if ($request->ajax()) {
-            return view('user.userproducts.partials.products-table', compact('products'))->render();
+
+            $products = ProductModel::where('user_id', Auth::id());
+
+            // Live search
+            if ($request->filled('search_value')) {
+                $products->where(function ($q) use ($request) {
+                    $q->where('name', 'like', "%{$request->search_value}%")
+                      ->orWhere('category', 'like', "%{$request->search_value}%")
+                      ->orWhere('quality', 'like', "%{$request->search_value}%");
+                });
+            }
+
+            // Status filter
+            if ($request->filled('status') && $request->status !== 'all') {
+                if ($request->status === 'Available') {
+                    $products->where('quantity', '>', 5);
+                } elseif ($request->status === 'Low') {
+                    $products->whereBetween('quantity', [1, 5]);
+                } elseif ($request->status === 'Out of Stock') {
+                    $products->where('quantity', 0);
+                }
+            }
+
+            // Source filter (FIXED)
+            if ($request->filled('source') && $request->source !== 'all') {
+                if ($request->source === 'admin') {
+                    $products->where('source', 'like', '%Admin%');
+                } elseif ($request->source === 'purchased') {
+                    $products->where('source', 'like', '%purchase%');
+                }
+            }
+
+            return DataTables::of($products)
+                ->addColumn('showroom', fn () => Auth::user()->name)
+                ->addColumn('status', function ($p) {
+                    if ($p->quantity == 0) {
+                        return '<span class="badge bg-danger">Out of Stock</span>';
+                    } elseif ($p->quantity <= 5) {
+                        return '<span class="badge bg-warning">Low Stock</span>';
+                    }
+                    return '<span class="badge bg-success">Available</span>';
+                })
+                ->rawColumns(['status'])
+                ->make(true);
         }
 
-        return view('user.userproducts.products', compact('products'));
-    }
-
-    // --- Delete product ---
-    public function destroy($id)
-    {
-        $user = Auth::user();
-        $product = ProductModel::where('id', $id)->where('user_id', $user->id)->first();
-
-        if(!$product){
-            return response()->json(['success' => false, 'message' => 'Product not found or not authorized.']);
-        }
-
-        try {
-            $product->delete();
-            return response()->json(['success' => true, 'message' => 'Product deleted successfully.']);
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'Failed to delete product.']);
-        }
+        return view('user.userproducts.products');
     }
 }

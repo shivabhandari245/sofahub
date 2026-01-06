@@ -4,7 +4,8 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/usercss/products.css') }}">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
+
 @endpush
 
 @section('content')
@@ -24,7 +25,6 @@
 
         <p>Manage your showroom's sofa inventory and stock levels</p>
 
-        <!-- STATS (UNCHANGED) -->
         @php
         $totalProducts = \App\Models\ProductModel::where('user_id', auth()->id())->count();
         $availableProducts = \App\Models\ProductModel::where('user_id', auth()->id())->where('quantity','>',5)->count();
@@ -71,94 +71,85 @@
                     <option value="admin" {{ request('source')=='admin'?'selected':'' }}>From Admin</option>
                     <option value="purchased" {{ request('source')=='purchased'?'selected':'' }}>Purchased</option>
                 </select>
-
-                <button type="submit" class="btn btn-secondary">Filter</button>
             </div>
         </form>
 
         <!-- TABLE -->
         <div id="productsTableContainer">
-            @include('user.userproducts.partials.products-table')
-        </div>
+         <div class="table-responsive">
+  <table id="productsTable" class="table table-hover table-bordered">
+
+        <thead class="table-light">
+            <tr>
+                <th>Product</th>
+                <th>Category</th>
+                <th>Quality</th>
+                <th>Quantity</th>
+                <th>Cost</th>
+                <th>Total Cost</th>
+                <th>ShowRoom</th>
+                <th>Source</th>
+                <th>Status</th>
+              
+            </tr>
+        </thead>
+
+</div>
+ </div>
     </div>
 </div>
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+$(function () {
 
-    const tableContainer = document.getElementById('productsTableContainer');
-    const filterForm = document.getElementById('filterForm');
-
-    // FILTER SUBMIT (AJAX)
-    filterForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        fetchProducts(new FormData(filterForm));
-    });
-
-    // PAGINATION (AJAX ONLY TABLE)
-    tableContainer.addEventListener('click', function(e) {
-        const link = e.target.closest('.pagination a');
-        if (link) {
-            e.preventDefault();
-            fetchProducts(null, link.href);
-        }
-    });
-
-    // DELETE PRODUCT
-    tableContainer.addEventListener('click', function(e) {
-        const btn = e.target.closest('.delete-product');
-        if (!btn) return;
-
-        const productId = btn.dataset.id;
-
-        Swal.fire({
-            title: 'Are you sure?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Yes, delete it!'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                fetch(`/user/products/${productId}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                            'Accept': 'application/json'
-                        }
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            Swal.fire('Deleted!', data.message, 'success');
-                            fetchProducts(new FormData(filterForm));
-                        } else {
-                            Swal.fire('Error!', data.message, 'error');
-                        }
-                    });
+    let table = $('#productsTable').DataTable({
+        processing: true,
+        serverSide: true,
+        searching: false, 
+        ajax: {
+            url: "{{ route('user.products.index') }}",
+            data: function (d) {
+                d.search_value = $('input[name="search"]').val();
+                d.status = $('select[name="status"]').val();
+                d.source = $('select[name="source"]').val();
             }
-        });
+        },
+        columns: [
+            { data: 'name' },
+            { data: 'category' },
+            { data: 'quality' },
+            { data: 'quantity' },
+            {
+                data: 'cost_per_product',
+                render: data => 'Rs ' + parseFloat(data).toFixed(2)
+            },
+            {
+                data: 'total_cost',
+                render: data => 'Rs ' + parseFloat(data).toFixed(2)
+            },
+            { data: 'showroom', orderable: false, searchable: false },
+            { data: 'source' },
+            { data: 'status', orderable: false, searchable: false }
+        ]
     });
 
-    function fetchProducts(formData = null, url = null) {
-        let fetchUrl = url ?? "{{ route('user.products.index') }}";
+    
+    $('input[name="search"]').on('keyup', function () {
+        table.draw();
+    });
 
-        if (formData) {
-            fetchUrl += '?' + new URLSearchParams(formData).toString();
-        }
-
-        fetch(fetchUrl, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(res => res.text())
-            .then(html => {
-                tableContainer.innerHTML = html; // TABLE ONLY
-            });
-    }
+    $('select[name="status"], select[name="source"]').on('change', function () {
+        table.draw();
+    });
 });
 </script>
+
+
+
 @endpush
