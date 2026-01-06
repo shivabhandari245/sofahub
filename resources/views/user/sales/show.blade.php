@@ -116,7 +116,10 @@
                             <th>Discount:</th>
                             <td class="text-end">-{{ number_format($sale->discount, 2) }}</td>
                         </tr>
-                        
+                        <tr>
+                    <th>After Discount:</th>
+                    <td class="text-end">{{ number_format($sale->afterdiscount, 2) }}</td>
+                </tr>
                         <tr>
                             <th>Tax ({{ $sale->tax_rate }}%):</th>
                             <td class="text-end">{{ number_format($sale->tax_amount, 2) }}</td>
@@ -132,6 +135,18 @@
                                 {{ number_format($sale->profit, 2) }}
                             </td>
                         </tr>
+
+
+                         <tr>
+                    <th>Payment:</th>
+                    <td class="text-end">{{ $sale->payment_method ? ucfirst($sale->payment_method) : 'N/A' }}</td>
+                </tr>
+                @if($sale->payment_remarks)
+                <tr>
+                    <th>Remarks:</th>
+                    <td class="text-end">{{ $sale->payment_remarks }}</td>
+                </tr>
+                @endif
                     </table>
                 </div>
             </div>

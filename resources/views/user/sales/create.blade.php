@@ -254,6 +254,8 @@
                                     </div>
                                 </div>
                             </div>
+<input type="hidden" name="payment_method" id="paymentMethodInput">
+<input type="hidden" name="payment_remarks" id="paymentRemarksInput">
 
                             <input type="hidden" name="cartItems" id="cartItemsInput">
                             <button type="submit" class="btn btn-success w-100 btn-lg" id="checkoutBtn" disabled>
@@ -594,10 +596,6 @@ $('.payment-check').on('change', function () {
 });
 
 
-
-/* ===============================
-   PAYMENT VALIDATION
-================================ */
 
 
 /* ===============================
@@ -1032,7 +1030,7 @@ $('#addCustomerForm').submit(function(e) {
         });
 });
 
-$('#checkoutForm').on('submit', function (e) {
+$('#checkoutForm').on('submit', function(e) {
     if (cart.length === 0) {
         e.preventDefault();
         showError('Your cart is empty.');
@@ -1047,7 +1045,16 @@ $('#checkoutForm').on('submit', function (e) {
 
     if (!validatePayments()) {
         e.preventDefault();
+        return;
     }
+
+   
+    const selectedPayments = $('.payment-check:checked').map(function() {
+        return $(this).val();
+    }).get();
+
+    $('#paymentMethodInput').val(JSON.stringify(selectedPayments));
+    $('#paymentRemarksInput').val($('#paymentRemarks').val());
 });
 
 

@@ -5,14 +5,14 @@
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="d-flex justify-content-between align-items-center">
-                <h1 class="h3 mb-0">Sale #{{ str_pad($sale->id, 6, '0', STR_PAD_LEFT) }}</h1>
+                <h1 class="h3 mb-0">INVOICE{{ str_pad($sale->id, 6, '0', STR_PAD_LEFT) }}</h1>
                 <div class="btn-group">
-                    <a href="{{ route('sales.print', $sale->id) }}" 
+                    <a href="{{ route('user.invoices.print', $sale->id) }}" 
                        class="btn btn-secondary" target="_blank">
                         <i class="fas fa-print"></i> Print Invoice
                     </a>
-                    <a href="{{ route('sales.index') }}" class="btn btn-primary">
-                        <i class="fas fa-arrow-left"></i> Back to Sales
+                       <a href="{{ route('user.invoices.index') }}" class="btn btn-primary">
+                        <i class="fas fa-arrow-left"></i> Back to Invoices
                     </a>
                 </div>
             </div>
@@ -111,14 +111,20 @@
                             <th>Subtotal:</th>
                             <td class="text-end">{{ number_format($sale->subtotal, 2) }}</td>
                         </tr>
-                        <tr>
-                            <th>Tax ({{ $sale->tax_rate }}%):</th>
-                            <td class="text-end">{{ number_format($sale->tax_amount, 2) }}</td>
-                        </tr>
+
                         <tr>
                             <th>Discount:</th>
                             <td class="text-end">-{{ number_format($sale->discount, 2) }}</td>
                         </tr>
+                        <tr>
+                    <th>After Discount:</th>
+                    <td class="text-end">{{ number_format($sale->afterdiscount, 2) }}</td>
+                </tr>
+                        <tr>
+                            <th>Tax ({{ $sale->tax_rate }}%):</th>
+                            <td class="text-end">{{ number_format($sale->tax_amount, 2) }}</td>
+                        </tr>
+                        
                         <tr class="table-active fw-bold">
                             <th>Total Amount:</th>
                             <td class="text-end">{{ number_format($sale->total_amount, 2) }}</td>
@@ -129,6 +135,18 @@
                                 {{ number_format($sale->profit, 2) }}
                             </td>
                         </tr>
+
+
+                         <tr>
+                    <th>Payment:</th>
+                    <td class="text-end">{{ $sale->payment_method ? ucfirst($sale->payment_method) : 'N/A' }}</td>
+                </tr>
+                @if($sale->payment_remarks)
+                <tr>
+                    <th>Remarks:</th>
+                    <td class="text-end">{{ $sale->payment_remarks }}</td>
+                </tr>
+                @endif
                     </table>
                 </div>
             </div>
