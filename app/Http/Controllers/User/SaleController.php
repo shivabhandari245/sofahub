@@ -113,12 +113,18 @@ public function getCustomers(Request $request)
 
 public function store(Request $request)
 {
+   
     $validated = $request->validate([
-        'customer_id' => 'required|exists:customers,id',
-        'cartItems'   => 'required|json',
-        'tax_rate'    => 'nullable|numeric|min:0|max:100',
-        'discount'    => 'nullable|numeric|min:0',
-    ]);
+    'customer_id'     => 'required|exists:customers,id',
+    'cartItems'       => 'required|json',
+    'tax_rate'        => 'nullable|numeric|min:0|max:100',
+    'discount'        => 'nullable|numeric|min:0',
+    'payment_method'  => 'nullable|string', // added
+    'payment_remarks' => 'nullable|string', // added
+]);
+
+$paymentMethod  = $validated['payment_method'] ?? null; 
+$paymentRemarks = $validated['payment_remarks'] ?? null; 
 
     $cartItems = json_decode($validated['cartItems'], true);
     $taxRate   = $validated['tax_rate'] ?? 0;   // default 0% if not provided
@@ -138,6 +144,8 @@ public function store(Request $request)
             'profit'      => 0,
             'user_id'     => auth::id(),
             'status'      => 'completed',
+            'payment_method' => $paymentMethod,
+    'payment_remarks' => $paymentRemarks,
         ]);
 
         $subtotal   = 0;
@@ -167,20 +175,24 @@ public function store(Request $request)
             ]);
 
             $subtotal    += $itemSubtotal;
+
             $totalProfit += $itemProfit;
         }
 
-      
-        $taxAmount   = round($subtotal * ($taxRate / 100), 2);
-        $totalAmount = round($subtotal + $taxAmount - $discount, 2);
+      $afterDiscount = max(0, $subtotal - $discount); // never negative
+$taxAmount = round($afterDiscount * ($taxRate / 100), 2);
+$totalAmount = round($afterDiscount + $taxAmount, 2);
+
 
         $sale->update([
-            'subtotal'     => $subtotal,
-            'tax_rate'     => $taxRate,
-            'tax_amount'   => $taxAmount,
-            'total_amount' => $totalAmount,
-            'profit'       => $totalProfit,
-        ]);
+    'subtotal'      => $subtotal,
+    'afterdiscount' => $afterDiscount,
+    'tax_rate'      => $taxRate,
+    'tax_amount'    => $taxAmount,
+    'total_amount'  => $totalAmount,
+    'profit'        => $totalProfit,
+
+]);
 
         DB::commit();
 

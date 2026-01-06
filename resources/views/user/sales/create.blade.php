@@ -146,10 +146,6 @@
                                                     <i class="fas fa-user-check me-1 text-success"></i>
                                                     Selected Customer
                                                 </h6>
-                                                <button type="button" class="btn btn-sm btn-outline-secondary"
-                                                    id="changeCustomerBtn">
-                                                    <i class="fas fa-exchange-alt me-1"></i>Change
-                                                </button>
                                             </div>
 
                                             <!-- Customer Info Display -->
@@ -188,24 +184,69 @@
                             </div>
 
                             <!-- Totals -->
-                            <div class="card mb-3">
-                                <div class="card-header bg-light py-2">
-                                    <h6 class="mb-0"><i class="fas fa-calculator me-1"></i>Payment Summary</h6>
-                                </div>
+                           
+ <div class="card mb-3">
+    <div class="border rounded p-3 mb-3 bg-light">
+        <h6 class="fw-semibold mb-2">
+            <i class="fas fa-credit-card me-1"></i> Payment Method
+        </h6>
+
+        <!-- Payment Options -->
+        <div class="row align-items-center mb-2">
+            <div class="col-4">
+                <div class="form-check">
+                    <input class="form-check-input payment-check" type="checkbox" value="cash" id="payCash">
+                    <label class="form-check-label" for="payCash">💵 Cash</label>
+                </div>
+            </div>
+
+            <div class="col-4">
+                <div class="form-check">
+                    <input class="form-check-input payment-check" type="checkbox" value="qr" id="payQR">
+                    <label class="form-check-label" for="payQR">📱 QR</label>
+                </div>
+            </div>
+
+            <div class="col-4">
+                <div class="form-check">
+                    <input class="form-check-input payment-check" type="checkbox" value="cheque" id="payCheque">
+                    <label class="form-check-label" for="payCheque">🧾 Cheque</label>
+                </div>
+            </div>
+        </div>
+
+      
+        <div class="row mt-2" id="paymentRemarksRow" style="display:none;">
+            <div class="col-12">
+                <input type="text" class="form-control" id="paymentRemarks" placeholder="Enter remarks">
+            </div>
+        </div>
+    </div>
+</div>
+
                                 <div class="card-body p-3">
                                     <div class="border rounded p-3 bg-white">
                                         <div class="d-flex justify-content-between mb-1">
                                             <span>Subtotal:</span>
                                             <span class="fw-semibold" id="cartSubtotal">0.00</span>
                                         </div>
-                                        <div class="d-flex justify-content-between mb-1">
-                                            <span>Tax:</span>
-                                            <span class="text-danger" id="taxAmount">0.00</span>
-                                        </div>
                                         <div class="d-flex justify-content-between mb-2">
                                             <span>Discount:</span>
                                             <span class="text-success" id="discountAmount">0.00</span>
                                         </div>
+                                     
+                                         <div class="d-flex justify-content-between mb-2">
+                                            <span>SubTotalAfterDiscount:</span>
+                                            <span class="text-success" id="subtotalafterdiscountAmount">0.00</span>
+                                        </div>
+
+
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>Tax:</span>
+                                            <span class="text-danger" id="taxAmount">0.00</span>
+                                        </div>
+                                        
+                                       
                                         <div class="d-flex justify-content-between border-top pt-2">
                                             <span class="fw-bold fs-5">Total:</span>
                                             <span class="fw-bold fs-5 text-primary" id="cartTotal">0.00</span>
@@ -516,6 +557,49 @@ let products = [];
 let cart = [];
 let currentProduct = null;
 
+function showError(message) {
+    Swal.fire({
+        icon: 'error',
+        title: 'Invalid Action',
+        text: message,
+        confirmButtonColor: '#d33'
+    });
+}
+
+function showSuccess(message) {
+    Swal.fire({
+        icon: 'success',
+        title: 'Success',
+        text: message,
+        timer: 1200,
+        showConfirmButton: false
+    });
+}
+
+/* ===============================
+   SPLIT PAYMENT LOGIC
+================================ */
+//paymentcheck method 
+
+$('.payment-check').on('change', function () {
+    // Show remarks input if any payment is selected
+    if ($('.payment-check:checked').length > 0) {
+        $('#paymentRemarksRow').slideDown();
+    } else {
+        $('#paymentRemarksRow').slideUp();
+        $('#paymentRemarks').val(''); // clear remarks
+    }
+
+    validatePayments(); // re-validate whenever where selection changes
+});
+
+
+
+/* ===============================
+   PAYMENT VALIDATION
+================================ */
+
+
 /* ===============================
    PRODUCT LOADING
 ================================ */
@@ -596,21 +680,65 @@ $('#unitPriceInput, #quantityInput').on('input', function() {
     $('#profitPerUnit').text(profit.toFixed(2));
 });
 
-$('#confirmAdd').click(function() {
+$('#confirmAdd').click(function () {
     let qty = parseFloat($('#quantityInput').val());
     let price = parseFloat($('#unitPriceInput').val());
 
-    cart.push({
-        product_id: currentProduct.id,
-        name: currentProduct.name,
-        quantity: qty,
-        unit_price: price,
-        cost_price: currentProduct.cost_per_product
-    });
+    if (!qty || qty <= 0) {
+        showError('Enter a valid quantity.');
+        return;
+    }
 
-    $('#quantityModal').modal('hide');
-    renderCart();
+    let existingIndex = cart.findIndex(
+        item => item.product_id === currentProduct.id
+    );
+
+    let cartQty = existingIndex !== -1 ? cart[existingIndex].quantity : 0;
+    let remainingStock = currentProduct.quantity - cartQty;
+
+    // 🚫 Stock check
+    if (qty > remainingStock) {
+        showError(`Not enough stock available. Remaining: ${remainingStock}`);
+        return;
+    }
+
+    // ⚠️ Product already exists → confirmation
+    if (existingIndex !== -1) {
+        Swal.fire({
+            title: 'Product already in cart',
+            text: 'Do you want to update the quantity?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Update',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#0d6efd'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                cart[existingIndex].quantity += qty;
+                cart[existingIndex].unit_price = price;
+
+                $('#quantityModal').modal('hide');
+                renderCart();
+                showSuccess('Cart updated successfully');
+            }
+        });
+
+    } else {
+        // ✅ New product
+        cart.push({
+            product_id: currentProduct.id,
+            name: currentProduct.name,
+            quantity: qty,
+            unit_price: price,
+            cost_price: currentProduct.cost_per_product
+        });
+
+        $('#quantityModal').modal('hide');
+        renderCart();
+        showSuccess('Product added to cart');
+    }
 });
+
 
 /* ===============================
    CART RENDER
@@ -631,7 +759,7 @@ function renderCart() {
             <tr>
                 <td>${item.name}</td>
                 <td>${item.quantity}</td>
-                <td>${item.unit_price}</td>
+                <td>${item.unit_price.toFixed(2)}</td>
                 <td>${rowSubtotal.toFixed(2)}</td>
                 <td>${rowProfit.toFixed(2)}</td>
                 <td>
@@ -643,10 +771,19 @@ function renderCart() {
         `);
     });
 
+    // Update subtotal in DOM
     $('#cartSubtotal').text(subtotal.toFixed(2));
+
+    // Recalculate totals including discount, tax, etc.
     calculateTotals();
+
+    // Update cart items input for backend
     $('#cartItemsInput').val(JSON.stringify(cart));
-    $('#checkoutBtn').prop('disabled', cart.length === 0);
+
+    // Update checkout button
+    validatePayments();
+
+    // Update cart count display
     $('#cartCount').text(cart.length);
 }
 
@@ -660,18 +797,64 @@ $(document).on('click', '.removeItem', function() {
 ================================ */
 $('#taxRate, #discount').on('input', calculateTotals);
 
+
 function calculateTotals() {
-    let subtotal = parseFloat($('#cartSubtotal').text());
-    let taxRate = parseFloat($('#taxRate').val()) || 0;
+    let subtotal = parseFloat($('#cartSubtotal').text()) || 0;
     let discount = parseFloat($('#discount').val()) || 0;
+    let taxRate = parseFloat($('#taxRate').val()) || 0;
+    
+    // Prevent discount larger than subtotal
+    if (discount > subtotal) discount = subtotal;
+    $('#discountAmount').text(discount.toFixed(2)); // ✅ update the display
 
-    let tax = subtotal * (taxRate / 100);
-    let total = subtotal + tax - discount;
+    // Subtotal after discount
+    let subtotalAfterDiscount = subtotal - discount;
+    $('#subtotalafterdiscountAmount').text(subtotalAfterDiscount.toFixed(2));
 
+    // Tax applied on subtotal after discount
+    let tax = subtotalAfterDiscount * (taxRate / 100);
     $('#taxAmount').text(tax.toFixed(2));
-    $('#discountAmount').text(discount.toFixed(2));
+
+    // Total
+    let total = subtotalAfterDiscount + tax;
     $('#cartTotal').text(total.toFixed(2));
 }
+
+
+
+function validatePayments() {
+    let total = parseFloat($('#cartTotal').text()) || 0;
+    let selected = $('.payment-check:checked');
+    let valid = true;
+    let message = '';
+
+    if (selected.length === 0) {
+        valid = false;
+        message = 'Please select at least one payment method.';
+    }
+
+    // Remarks required if any payment selected
+    if (valid && selected.length > 0) {
+        const remarks = $('#paymentRemarks').val().trim();
+        if (!remarks) {
+            valid = false;
+            message = 'Please enter remarks for the payment.';
+        }
+    }
+
+    $('#checkoutBtn').prop('disabled', !valid || cart.length === 0);
+
+    if (!valid && message) console.warn(message);
+
+    return valid;
+}
+
+// Revalidate when remarks change
+$('#paymentRemarks').on('input', validatePayments);
+
+
+
+
 
 /* ===============================
    CUSTOMER SEARCH
@@ -695,23 +878,43 @@ $('#customerSearch').on('keyup', function() {
     });
 });
 
+
 $(document).on('click', '.customerSelect', function() {
     let c = $(this).data('customer');
 
+    // Set hidden inputs
     $('#customer_id').val(c.id);
     $('#customer_name').val(c.name);
     $('#customer_phone').val(c.phone);
     $('#customer_email').val(c.email);
     $('#customer_address').val(c.address);
 
+    // Show all details in grid
     $('#customerInfoDisplay').html(`
-        <strong>${c.name}</strong><br>
-        ${c.phone}<br>${c.email ?? ''}
+        <div class="customer-details-grid">
+            <div class="customer-detail-item">
+                <div class="customer-detail-label">Name</div>
+                <div class="customer-detail-value">${c.name}</div>
+            </div>
+            <div class="customer-detail-item">
+                <div class="customer-detail-label">Phone</div>
+                <div class="customer-detail-value">${c.phone}</div>
+            </div>
+            <div class="customer-detail-item">
+                <div class="customer-detail-label">Email</div>
+                <div class="customer-detail-value">${c.email ?? '<span class="empty">N/A</span>'}</div>
+            </div>
+            <div class="customer-detail-item">
+                <div class="customer-detail-label">Address</div>
+                <div class="customer-detail-value">${c.address ?? '<span class="empty">N/A</span>'}</div>
+            </div>
+        </div>
     `);
 
     $('#customerDetailsForm').show();
     $('#customerSuggestions').hide();
 });
+
 
 
 function validateCustomerForm() {
@@ -766,23 +969,48 @@ $('#addCustomerBtn').click(() => {
     $('#addCustomerModal').modal('show');
 });
 
+
+//customer form submitting 
+
+
 $('#addCustomerForm').submit(function(e) {
     e.preventDefault();
 
-    if (!validateCustomerForm()) {
-        return;
-    }
+    if (!validateCustomerForm()) return;
 
     $.post("{{ route('user.customers.store') }}", $(this).serialize())
         .done(function(res) {
             if (res.success) {
-                $('#customer_id').val(res.customer.id);
-                $('#customer_name').val(res.customer.name);
-                $('#customer_phone').val(res.customer.phone);
+                let c = res.customer;
 
-                $('#customerInfoDisplay').html(
-                    `<strong>${res.customer.name}</strong><br>${res.customer.phone}`
-                );
+                // Set hidden inputs
+                $('#customer_id').val(c.id);
+                $('#customer_name').val(c.name);
+                $('#customer_phone').val(c.phone);
+                $('#customer_email').val(c.email);
+                $('#customer_address').val(c.address);
+
+                // Show all details
+                $('#customerInfoDisplay').html(`
+                    <div class="customer-details-grid">
+                        <div class="customer-detail-item">
+                            <div class="customer-detail-label">Name</div>
+                            <div class="customer-detail-value">${c.name}</div>
+                        </div>
+                        <div class="customer-detail-item">
+                            <div class="customer-detail-label">Phone</div>
+                            <div class="customer-detail-value">${c.phone}</div>
+                        </div>
+                        <div class="customer-detail-item">
+                            <div class="customer-detail-label">Email</div>
+                            <div class="customer-detail-value">${c.email ?? '<span class="empty">N/A</span>'}</div>
+                        </div>
+                        <div class="customer-detail-item">
+                            <div class="customer-detail-label">Address</div>
+                            <div class="customer-detail-value">${c.address ?? '<span class="empty">N/A</span>'}</div>
+                        </div>
+                    </div>
+                `);
 
                 $('#customerDetailsForm').show();
                 $('#addCustomerModal').modal('hide');
@@ -792,7 +1020,6 @@ $('#addCustomerForm').submit(function(e) {
         .fail(function(xhr) {
             if (xhr.status === 422) {
                 let errors = xhr.responseJSON.errors;
-
                 if (errors.name) $('.error-name').text(errors.name[0]);
                 if (errors.phone) $('.error-phone').text(errors.phone[0]);
                 if (errors.email) $('.error-email').text(errors.email[0]);
@@ -803,6 +1030,24 @@ $('#addCustomerForm').submit(function(e) {
                 alert('Something went wrong. Please try again.');
             }
         });
+});
+
+$('#checkoutForm').on('submit', function (e) {
+    if (cart.length === 0) {
+        e.preventDefault();
+        showError('Your cart is empty.');
+        return;
+    }
+
+    if (!$('#customer_id').val()) {
+        e.preventDefault();
+        showError('Please select a customer.');
+        return;
+    }
+
+    if (!validatePayments()) {
+        e.preventDefault();
+    }
 });
 
 

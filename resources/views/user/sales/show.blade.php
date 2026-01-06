@@ -111,14 +111,17 @@
                             <th>Subtotal:</th>
                             <td class="text-end">{{ number_format($sale->subtotal, 2) }}</td>
                         </tr>
-                        <tr>
-                            <th>Tax ({{ $sale->tax_rate }}%):</th>
-                            <td class="text-end">{{ number_format($sale->tax_amount, 2) }}</td>
-                        </tr>
+
                         <tr>
                             <th>Discount:</th>
                             <td class="text-end">-{{ number_format($sale->discount, 2) }}</td>
                         </tr>
+                        
+                        <tr>
+                            <th>Tax ({{ $sale->tax_rate }}%):</th>
+                            <td class="text-end">{{ number_format($sale->tax_amount, 2) }}</td>
+                        </tr>
+                        
                         <tr class="table-active fw-bold">
                             <th>Total Amount:</th>
                             <td class="text-end">{{ number_format($sale->total_amount, 2) }}</td>
