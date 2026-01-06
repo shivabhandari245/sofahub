@@ -4,205 +4,113 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use App\Models\Sale;
-use Illuminate\Support\Str;
+use Yajra\DataTables\Facades\DataTables;
+
 
 class InvoicesController extends Controller
 {
-   
+    // Dashboard view
     public function index(Request $request)
     {
-        $user = Auth::user();
         $months = $request->months ?? 3;
+        $user = Auth::user();
 
-        $invoices = $this->fetchInvoices($user->id, $months);
+        $invoices = Sale::where('user_id', $user->id)
+            ->where('date', '>=', Carbon::now()->subMonths($months))
+            ->get();
 
         return view('user.invoices.index', [
-            'invoices'       => $invoices->take(10),
-            'allInvoices'    => $invoices,
             'months'         => $months,
             'totalInvoices'  => $invoices->count(),
             'totalRevenue'   => $invoices->sum('total_amount'),
             'totalTax'       => $invoices->sum('tax_amount'),
             'totalDiscount'  => $invoices->sum('discount'),
-            'user'           => $user
         ]);
     }
 
-   
-    
-private function fetchInvoices($userId, $months)
-{
-    $startDate = Carbon::now()->subMonths($months);
-
-    $invoices = Sale::with('customer')
-        ->where('user_id', $userId)
-        ->where('date', '>=', $startDate)
-        ->orderByDesc('date')
-        ->get();
-
-    foreach ($invoices as $invoice) {
-        $this->formatInvoice($invoice);
-    }
-
-    return $invoices;
-}
-
-  
-    public function search(Request $request)
-    {
-        $user = Auth::user();
-        $query = $request->q;
-
-        $results = DB::table('sales')
-            ->where('user_id', $user->id)
-            ->where(function ($q) use ($query) {
-                $q->where('customer_name', 'like', "%$query%")
-                  ->orWhere('id', 'like', "%$query%")
-                  ->orWhere('customer_email', 'like', "%$query%")
-                  ->orWhere('customer_phone', 'like', "%$query%");
-            })
-            ->orderByDesc('date')
-            ->limit(20)
-            ->get();
-
-        foreach ($results as $invoice) {
-            $this->formatInvoice($invoice);
-        }
-
-        return response()->json($results);
-    }
-
-   
-    public function getInvoiceDetails($id)
-    {
-        $user = Auth::user();
-
- $invoice = Sale::with('customer')
-    ->where('user_id', $user->id)
-    ->where('id', $id)
-    ->firstOrFail();
-        if (!$invoice) {
-            return response()->json(['error' => 'Invoice not found'], 404);
-        }
-
-        $this->formatInvoice($invoice);
-
-        return response()->json([
-            'invoice'   => $invoice,
-            'product'   => ['name' => $invoice->product_name],
-            'formatted' => [
-                'date'         => $invoice->formatted_date,
-                'subtotal'     => $invoice->formatted_subtotal,
-                'tax_amount'   => $invoice->formatted_tax,
-                'discount'     => $invoice->formatted_discount,
-                'total_amount' => $invoice->formatted_total,
-            ]
-        ]);
-    }
-
-
-
-    
-//pdf ko lagi
-    public function generatePDF($id)
-{
-    $user = Auth::user();
-
-    $invoice = Sale::with('customer')
-    ->where('user_id', $user->id)
-    ->where('id', $id)
-    ->firstOrFail();
-
-    if (!$invoice) {
-        abort(404, 'Invoice not found');
-    }
-
-    $invoice->product_name = $invoice->product_name ?? 'Unknown Product';
-
-    $data = [
-        'invoice'                => $invoice,
-        'user'                   => $user,
-        'date'                   => Carbon::parse($invoice->date)->format('F d, Y'),
-        'formatted_date'         => Carbon::parse($invoice->date)->format('F d, Y h:i A'),
-        'subtotal_formatted'     => number_format($invoice->subtotal, 2),
-        'tax_amount_formatted'   => number_format($invoice->tax_amount, 2),
-        'discount_formatted'     => number_format($invoice->discount, 2),
-        'total_amount_formatted' => number_format($invoice->total_amount, 2),
-    ];
-
-    $pdf = Pdf::loadView('user.invoices.print', $data);
-
-    return $pdf->download('invoice-' . $invoice->id . '.pdf');
-}
-
-  
-    public function print($id)
-    {
-        $user = Auth::user();
-
-        $invoice = Sale::with('customer')
-    ->where('user_id', $user->id)
-    ->where('id', $id)
-    ->firstOrFail();
-
-        if (!$invoice) {
-            abort(404, 'Invoice not found');
-        }
-
-        $this->formatInvoice($invoice);
-
-        return view('user.invoices.print', [
-            'invoice'                => $invoice,
-            'user'                   => $user,
-            'date'                   => Carbon::parse($invoice->date)->format('F d, Y'),
-            'formatted_date'         => Carbon::parse($invoice->date)->format('F d, Y h:i A'),
-            'subtotal_formatted'     => $invoice->formatted_subtotal,
-            'tax_amount_formatted'   => $invoice->formatted_tax,
-            'discount_formatted'     => $invoice->formatted_discount,
-            'total_amount_formatted' => $invoice->formatted_total,
-        ]);
-    }
-
-  
-    public function downloadAll(Request $request)
+    // Server-side DataTables
+    public function datatables(Request $request)
     {
         $user = Auth::user();
         $months = $request->months ?? 3;
+        $startDate = Carbon::now()->subMonths($months);
 
-        $invoices = $this->fetchInvoices($user->id, $months);
+        // Eager load customer, cashier (user), and items
+        $invoices = Sale::with('customer', 'user', 'items')
+            ->where('user_id', $user->id)
+            ->where('date', '>=', $startDate)
+            ->orderByDesc('date');
 
-        $pdf = Pdf::loadView('user.invoices.exportall', [
-            'invoices'       => $invoices,
-            'user'           => $user,
-            'months'         => $months,
-            'totalRevenue'   => $invoices->sum('total_amount'),
-            'totalTax'       => $invoices->sum('tax_amount'),
-            'totalDiscount'  => $invoices->sum('discount'),
-            'date_range'     => [
-                'start' => Carbon::now()->subMonths($months)->format('F d, Y'),
-                'end'   => Carbon::now()->format('F d, Y'),
-            ]
-        ]);
-
-        return $pdf->download('invoices-' . now()->format('Y-m-d') . '.pdf');
+        return DataTables::of($invoices)
+            ->addColumn('customer', fn($sale) => $sale->customer->name ?? 'Walk-in')
+            ->addColumn('cashier', fn($sale) => $sale->user->name ?? 'N/A')
+            ->addColumn('items', function($sale){
+              
+                return $sale->items->map(fn($item) => $item->quantity.$item->product_name)->join(', ');
+            })
+            ->addColumn('afterdiscount', fn($sale) => number_format($sale->subtotal - $sale->discount, 2))
+            ->addColumn('status', fn($sale) =>
+                $sale->returned 
+                    ? '<span class="badge bg-danger">Returned</span>'
+                    : '<span class="badge bg-success">Completed</span>'
+            )
+            ->addColumn('actions', fn($sale) =>
+                '<a href="'.route('user.invoices.show', $sale->id).'" class="btn btn-info btn-sm"><i class="fas fa-eye"></i></a>
+                 <a href="'.route('user.invoices.print', $sale->id).'" target="_blank" class="btn btn-secondary btn-sm"><i class="fas fa-print"></i></a>'
+            )
+            ->editColumn('subtotal', fn($sale) => number_format($sale->subtotal, 2))
+            ->editColumn('discount', fn($sale) => number_format($sale->discount, 2))
+            ->editColumn('tax_amount', fn($sale) => number_format($sale->tax_amount, 2))
+            ->editColumn('total_amount', fn($sale) => number_format($sale->total_amount, 2))
+            ->editColumn('profit', fn($sale) => '<span class="'.($sale->profit >= 0 ? 'text-success' : 'text-danger').'">'.number_format($sale->profit, 2).'</span>')
+            ->rawColumns(['status','actions','profit'])
+            ->make(true);
     }
 
- 
-    private function formatInvoice(&$invoice)
-    {
-        $invoice->product_name = $invoice->product_name ?? 'Unknown Product';
+    public function show($id)
+{
+    $sale = Sale::with('customer', 'items')->where('user_id', Auth::id())->findOrFail($id);
 
-        $invoice->formatted_date      = Carbon::parse($invoice->date)->format('Y-m-d');
-        $invoice->formatted_subtotal  = number_format($invoice->subtotal, 2);
-        $invoice->formatted_tax       = number_format($invoice->tax_amount, 2);
-        $invoice->formatted_discount  = number_format($invoice->discount, 2);
-        $invoice->formatted_total     = number_format($invoice->total_amount, 2);
+    return view('user.invoices.show', [
+        'sale' => $sale
+    ]);
+}
 
-  $invoice->customer_name = Str::limit($invoice->customer->name ?? 'N/A', 20);
+
+
+    public function print($id)
+{
+    $sale = Sale::with('customer', 'items')->where('user_id', Auth::id())->findOrFail($id);
+
+    return view('user.invoices.print', [
+        'sale' => $sale
+    ]);
+}
+
+
+public function downloadAll(Request $request)
+{
+    $user = Auth::user();
+    $months = $request->months ?? 3;
+
+    $invoices = Sale::with('customer', 'items')
+        ->where('user_id', $user->id)
+        ->where('date', '>=', Carbon::now()->subMonths($months))
+        ->get();
+
+    if($invoices->isEmpty()) {
+        return redirect()->back()->with('error', 'No invoices to download.');
     }
+
+    $pdf = Pdf::loadView('user.invoices.exportall', [
+        'invoices' => $invoices
+    ]);
+
+    return $pdf->download('invoices_' . now()->format('Ymd_His') . '.pdf');
+}
+
 }

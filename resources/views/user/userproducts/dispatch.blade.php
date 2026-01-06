@@ -4,6 +4,10 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/usercss/dispatch.css') }}">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
 @endpush
 
 @section('content')
@@ -20,9 +24,7 @@
     </div>
 
     <div class="card mt-3">
-
         <h2>Incoming Stock</h2>
-
         <div class="table-responsive">
             <table class="table table-bordered" id="userDispatchTable">
                 <thead class="table-light">
@@ -39,41 +41,6 @@
                         <th width="140px">Action</th>
                     </tr>
                 </thead>
-                <tbody>
-                    @php $i=1; @endphp
-                    @foreach($dispatches as $dispatch)
-                    <tr id="row{{ $dispatch->id }}">
-                        <td>{{ $i++ }}</td>
-                        <td>{{ $dispatch->batch->product->name ?? '-' }}</td>
-                        <td>{{ $dispatch->batch->product->category->name ?? '-' }}</td>
-                        <td>{{ $dispatch->batch->product->quality->name ?? '-' }}</td>
-                        <td>{{ $dispatch->quantity }}</td>
-                        <td>{{ number_format($dispatch->batch->expected_unit_cost,2) }}</td>
-                        <td>{{ number_format($dispatch->batch->total_cost,2) }}</td>
-                        <td>{{ $dispatch->driver ?? '-' }}</td>
-                        <td>
-                            <span class="badge 
-                                    @if($dispatch->status=='Dispatched') bg-warning 
-                                    @elseif($dispatch->status=='In Transit') bg-info text-dark
-                                    @elseif($dispatch->status=='Delivered') bg-primary
-                                    @elseif($dispatch->status=='Received') bg-success
-                                    @endif">
-                                {{ $dispatch->status }}
-                            </span>
-                        </td>
-                        <td>
-                            @if($dispatch->status != 'Received')
-                            <button class="btn btn-success btn-sm receiveBtn" data-id="{{ $dispatch->id }}"
-                                data-product="{{ $dispatch->batch->product->name }}">
-                                Confirm Receive
-                            </button>
-                            @else
-                            <span class="text-success fw-bold">Completed</span>
-                            @endif
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
             </table>
         </div>
     </div>
@@ -82,6 +49,11 @@
 @endsection
 
 @push('scripts')
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- DataTables JS -->
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
 
 <script>
 $(document).ready(function() {
@@ -93,6 +65,29 @@ $(document).ready(function() {
         }
     });
 
+    // Initialize server-side DataTable
+    var table = $('#userDispatchTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: "{{ route('user.dispatch.serverSide') }}",
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'product', name: 'product' },
+            { data: 'category', name: 'category' },
+            { data: 'quality', name: 'quality' },
+            { data: 'quantity', name: 'quantity' },
+            { data: 'unit_cost', name: 'unit_cost' },
+            { data: 'total_cost', name: 'total_cost' },
+            { data: 'driver', name: 'driver' },
+            { data: 'status', name: 'status', orderable: false, searchable: false },
+            { data: 'action', name: 'action', orderable: false, searchable: false },
+        ],
+        responsive: true,
+        pageLength: 10,
+        lengthMenu: [5, 10, 25, 50]
+    });
+
+    // Confirm Receive button
     $(document).on('click', '.receiveBtn', function() {
         let dispatchId = $(this).data('id');
         let productName = $(this).data('product');
@@ -115,40 +110,8 @@ $(document).ready(function() {
                         remarks: result.value
                     },
                     success: function(res) {
-                        let row = $("#row" + res.id);
-
-                        // Set the new status
-                        let status = 'Received';
-
-                        // Determine badge class based on status
-                        let badgeClass = '';
-                        switch (status) {
-                            case 'Dispatched':
-                                badgeClass = 'bg-warning';
-                                break;
-                            case 'In Transit':
-                                badgeClass = 'bg-info text-dark';
-                                break;
-                            case 'Delivered':
-                                badgeClass = 'bg-primary';
-                                break;
-                            case 'Received':
-                                badgeClass = 'bg-success';
-                                break;
-                            default:
-                                badgeClass = 'bg-secondary';
-                        }
-
-                        // Update the status badge dynamically
-                        row.find("td:nth-child(9) span")
-                            .removeClass()
-                            .addClass("badge " + badgeClass)
-                            .text(status);
-
-                        // Update action column to "Completed"
-                        row.find("td:nth-child(10)").html(
-                            '<span class="text-success fw-bold">Completed</span>'
-                            );
+                        // Reload table row after update
+                        table.ajax.reload(null, false);
 
                         Swal.fire({
                             icon: 'success',
@@ -162,8 +125,7 @@ $(document).ready(function() {
                         Swal.fire({
                             icon: 'error',
                             title: 'Error',
-                            text: err.responseJSON?.error ||
-                                'Something went wrong! Try again.',
+                            text: err.responseJSON?.error || 'Something went wrong! Try again.',
                         });
                     }
                 });
@@ -173,5 +135,4 @@ $(document).ready(function() {
 
 });
 </script>
-
 @endpush

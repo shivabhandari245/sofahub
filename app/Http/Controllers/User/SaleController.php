@@ -119,16 +119,16 @@ public function store(Request $request)
     'cartItems'       => 'required|json',
     'tax_rate'        => 'nullable|numeric|min:0|max:100',
     'discount'        => 'nullable|numeric|min:0',
-    'payment_method'  => 'nullable|string', // added
-    'payment_remarks' => 'nullable|string', // added
+    'payment_method'  => 'nullable|string', 
+    'payment_remarks' => 'nullable|string', 
 ]);
 
 $paymentMethod  = $validated['payment_method'] ?? null; 
 $paymentRemarks = $validated['payment_remarks'] ?? null; 
 
     $cartItems = json_decode($validated['cartItems'], true);
-    $taxRate   = $validated['tax_rate'] ?? 0;   // default 0% if not provided
-    $discount  = $validated['discount'] ?? 0;   // default 0 if not provided
+    $taxRate   = $validated['tax_rate'] ?? 0;   
+    $discount  = $validated['discount'] ?? 0;  
     $customerId = $validated['customer_id'];
 
     DB::beginTransaction();
@@ -179,7 +179,7 @@ $paymentRemarks = $validated['payment_remarks'] ?? null;
             $totalProfit += $itemProfit;
         }
 
-      $afterDiscount = max(0, $subtotal - $discount); // never negative
+      $afterDiscount = max(0, $subtotal - $discount); 
 $taxAmount = round($afterDiscount * ($taxRate / 100), 2);
 $totalAmount = round($afterDiscount + $taxAmount, 2);
 

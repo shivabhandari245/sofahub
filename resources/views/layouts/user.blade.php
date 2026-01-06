@@ -53,12 +53,6 @@
                     <span>Products</span>
                 </a>
 
-                <a href="{{ url('user/reports') }}"
-                    class="nav-link {{ request()->is('user/reports') ? 'active' : '' }}">
-                    <i class="fas fa-chart-bar"></i>
-                    <span>Reports</span>
-                </a>
-
                 <a href="{{ url('user/purchase') }}"
                     class="nav-link {{ request()->is('user/purchase') ? 'active' : '' }}">
                     <i class="fas fa-shopping-cart"></i>

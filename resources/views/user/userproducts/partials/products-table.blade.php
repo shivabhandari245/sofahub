@@ -67,16 +67,7 @@
             </div>
         </tfoot>
     </table> @if ($products->lastPage() >= 1)
-    <div class="pagination-container">
-
-
-
-        {{-- Page 1 --}}
-        <span class="page-btn btn-primary">1</span>
-
-
-
-    </div>
+   
     @endif
 
 

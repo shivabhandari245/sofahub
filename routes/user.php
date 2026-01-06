@@ -65,8 +65,7 @@ Route::get('/customers/{customer}', [UserCustomerController::class, 'show'])->na
 Route::get('customers/ajax-search', [SaleController::class, 'getCustomers'])->name('customers.ajaxSearch');
 
    
-// Reports
-    Route::get('/reports', [ReportsController::class, 'index']);
+
 
    
     // Products & Purchase
@@ -84,7 +83,15 @@ Route::get('products/list', [UserProductsController::class, 'getProducts'])->nam
     Route::get('suppliers', [UserPurchaseController::class, 'getSuppliers'])->name('user.purchase.suppliers');
   Route::get('/purchase/latest', [UserPurchaseController::class, 'latestPurchases'])->name('user.purchase.latest');
 
+Route::get('/latest', [UserPurchaseController::class, 'latestPurchases'])->name('user.purchase.latest');
 
+    Route::get('/purchase/{id}/edit', [UserPurchaseController::class, 'edit'])->name('purchase.edit');
+
+    // Update purchase
+    Route::put('/purchase/{id}', [UserPurchaseController::class, 'update'])->name('purchase.update');
+
+    // Delete purchase
+    Route::delete('/purchase/{id}', [UserPurchaseController::class, 'destroy'])->name('purchase.destroy');
 
 // Invoices
 Route::prefix('invoices')->group(function () {
@@ -96,15 +103,13 @@ Route::prefix('invoices')->group(function () {
     Route::get('/{id}/generate-pdf', [InvoicesController::class, 'generatePDF'])->name('user.invoices.generatePDF');
     Route::get('/{id}/print', [InvoicesController::class, 'print'])->name('user.invoices.print');
     Route::get('/{id}', [InvoicesController::class, 'show'])->name('user.invoices.show');
+    Route::get('user/invoices/datatables', [InvoicesController::class, 'datatables'])->name('user.invoices.datatables');
+   Route::get('invoices/{id}', [InvoicesController::class, 'print'])->name('user.invoices.show');
 });
 
     // Dispatch
-    Route::get('/dispatch', [UserDispatchController::class, 'index'])->name('user.dispatch.index');
-    Route::get('/dispatch/create', [UserDispatchController::class, 'create'])->name('user.dispatch.create');
-    Route::post('/dispatch/confirm-receive', [UserDispatchController::class, 'confirmReceive'])->name('user.dispatch.confirmReceive');
-    Route::post('/dispatch/mark-transit', [UserDispatchController::class, 'markAsTransit'])->name('user.dispatch.mark-transit');
-    Route::post('/notifications/{id}/read', [UserDispatchController::class, 'markNotificationRead']);
-    Route::get('/dispatch/request', [UserDispatchController::class, 'requestForm'])->name('user.dispatch.request');
-    Route::post('/dispatch/confirmReceive', [UserDispatchController::class, 'confirmReceive'])->name('user.dispatch.confirm');
-    Route::post('/dispatch/update-status', [UserDispatchController::class, 'updateStatus'])->name('user.dispatch.update-status');
+    Route::get('dispatch', [UserDispatchController::class, 'index'])->name('user.dispatch.index');
+    Route::get('dispatch/server-side', [UserDispatchController::class, 'serverSideDispatch'])->name('user.dispatch.serverSide');
+    Route::post('dispatch/confirm-receive', [UserDispatchController::class, 'confirmReceive'])->name('user.dispatch.confirmReceive');
+
 });
