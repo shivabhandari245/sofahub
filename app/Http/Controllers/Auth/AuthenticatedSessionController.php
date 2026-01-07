@@ -23,21 +23,33 @@ class AuthenticatedSessionController extends Controller
 
 public function store(LoginRequest $request): RedirectResponse
 {
-   
     $request->authenticate();
     $request->session()->regenerate();
 
     /** @var User $user */
-        $user = Auth::user();
+    $user = Auth::user();
+
+
     if (!$user->approved) {
         Auth::logout();
-
         return redirect()
             ->route('waitingapproval')
             ->with('error', 'Your account is not approved yet.');
     }
 
-    
+
+    if (!$user->otp_verified) {
+        Auth::logout(); 
+        session(['otp_user_id' => $user->id]); 
+        return redirect()
+            ->route('otp.index')
+            ->with('message', 'Please verify OTP sent to your email.');
+    }
+
+   
+    Auth::login($user);
+
+
     if ($user->hasRole('admin')) {
         return redirect()->intended(route('admin.dashboard'));
     }
@@ -46,9 +58,10 @@ public function store(LoginRequest $request): RedirectResponse
         return redirect()->intended(route('user.userproducts.dashboard'));
     }
 
-   
+    // Fallback
     return redirect()->route('waitingapproval');
 }
+
 
 
   
