@@ -187,6 +187,7 @@ $paymentRemarks = $validated['payment_remarks'] ?? null;
 $taxAmount = round($afterDiscount * ($taxRate / 100), 2);
 $totalAmount = round($afterDiscount + $taxAmount, 2);
 
+$profitAfterDiscount = max(0, $totalProfit - $discount);
 
         $sale->update([
     'subtotal'      => $subtotal,
@@ -195,6 +196,7 @@ $totalAmount = round($afterDiscount + $taxAmount, 2);
     'tax_amount'    => $taxAmount,
     'total_amount'  => $totalAmount,
     'profit'        => $totalProfit,
+    'profitafterdiscount' => $profitAfterDiscount,
 
 ]);
 

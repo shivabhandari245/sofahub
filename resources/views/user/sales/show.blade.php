@@ -2,13 +2,13 @@
 
 @section('content')
 <div class="container-fluid">
+    <!-- Header -->
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="d-flex justify-content-between align-items-center">
                 <h1 class="h3 mb-0">Sale #{{ str_pad($sale->id, 6, '0', STR_PAD_LEFT) }}</h1>
                 <div class="btn-group">
-                    <a href="{{ route('sales.print', $sale->id) }}" 
-                       class="btn btn-secondary" target="_blank">
+                    <a href="{{ route('sales.print', $sale->id) }}" class="btn btn-secondary" target="_blank">
                         <i class="fas fa-print"></i> Print Invoice
                     </a>
                     <a href="{{ route('sales.index') }}" class="btn btn-primary">
@@ -20,6 +20,7 @@
     </div>
 
     <div class="row">
+        <!-- Sale Items -->
         <div class="col-md-8">
             <div class="card mb-4">
                 <div class="card-header">
@@ -27,7 +28,7 @@
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table">
+                        <table class="table table-bordered">
                             <thead>
                                 <tr>
                                     <th>Product</th>
@@ -35,7 +36,8 @@
                                     <th>Unit Price</th>
                                     <th>Subtotal</th>
                                     <th>Profit</th>
-                                    <th>status</th>
+                                    <th>Profit After Discount</th>
+                                    <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -48,7 +50,11 @@
                                     <td class="{{ $item->profit >= 0 ? 'text-success' : 'text-danger' }}">
                                         {{ number_format($item->profit, 2) }}
                                     </td>
-                                    <td>{{ $item->status }}</td>
+                                  <td class="text-center {{ $sale->profitafterdiscount >= 0 ? 'text-success' : 'text-danger' }}">
+    {{ number_format($sale->profitafterdiscount, 2) }}
+</td>
+
+                                    <td>{{ ucfirst($item->status) }}</td>
                                 </tr>
                                 @endforeach
                             </tbody>
@@ -58,7 +64,9 @@
             </div>
         </div>
 
+        <!-- Sale Information -->
         <div class="col-md-4">
+            <!-- General Sale Info -->
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0">Sale Information</h5>
@@ -67,7 +75,7 @@
                     <table class="table table-sm">
                         <tr>
                             <th>Date:</th>
-                            <td>{{ $sale->date->format('M d, Y h:i A') }}</td>
+                            <td>{{ $sale->date?->format('M d, Y h:i A') }}</td>
                         </tr>
                         <tr>
                             <th>Cashier:</th>
@@ -94,62 +102,40 @@
                         </tr>
                         <tr>
                             <th>Returned At:</th>
-                            <td>{{ $sale->returned_at->format('M d, Y h:i A') }}</td>
+                            <td>{{ $sale->returned_at?->format('M d, Y h:i A') }}</td>
                         </tr>
                         @endif
                     </table>
                 </div>
             </div>
 
-            <div class="card">
+            <!-- Profit Summary -->
+            <div class="card mb-4">
                 <div class="card-header">
-                    <h5 class="mb-0">Payment Summary</h5>
+                    <h5 class="mb-0">Profit Summary</h5>
                 </div>
                 <div class="card-body">
                     <table class="table table-sm">
-                        <tr>
-                            <th>Subtotal:</th>
-                            <td class="text-end">{{ number_format($sale->subtotal, 2) }}</td>
-                        </tr>
-
-                        <tr>
-                            <th>Discount:</th>
-                            <td class="text-end">-{{ number_format($sale->discount, 2) }}</td>
-                        </tr>
-                        <tr>
-                    <th>After Discount:</th>
-                    <td class="text-end">{{ number_format($sale->afterdiscount, 2) }}</td>
-                </tr>
-                        <tr>
-                            <th>Tax ({{ $sale->tax_rate }}%):</th>
-                            <td class="text-end">{{ number_format($sale->tax_amount, 2) }}</td>
-                        </tr>
-                        
-                        <tr class="table-active fw-bold">
-                            <th>Total Amount:</th>
-                            <td class="text-end">{{ number_format($sale->total_amount, 2) }}</td>
-                        </tr>
                         <tr>
                             <th>Profit:</th>
                             <td class="text-end {{ $sale->profit >= 0 ? 'text-success' : 'text-danger' }}">
                                 {{ number_format($sale->profit, 2) }}
                             </td>
                         </tr>
-
-
-                         <tr>
-                    <th>Payment:</th>
-                    <td class="text-end">{{ $sale->payment_method ? ucfirst($sale->payment_method) : 'N/A' }}</td>
+                        <tr>
+                    <th>Discount:</th>
+                    <td class="text-end">{{ number_format($sale->discount, 2) }}</td>
                 </tr>
-                @if($sale->payment_remarks)
-                <tr>
-                    <th>Remarks:</th>
-                    <td class="text-end">{{ $sale->payment_remarks }}</td>
-                </tr>
-                @endif
+                        <tr>
+                            <th>Profit After Discount:</th>
+                            <td class="text-end {{ $sale->profitafterdiscount >= 0 ? 'text-success' : 'text-danger' }}">
+                                {{ number_format($sale->profitafterdiscount, 2) }}
+                            </td>
+                        </tr>
                     </table>
                 </div>
             </div>
+
         </div>
     </div>
 </div>

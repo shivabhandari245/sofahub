@@ -16,6 +16,7 @@ class Sale extends Model
     'afterdiscount',
     'total_amount',
     'profit',
+     'profitafterdiscount',
     'status',
     'payment_method',    
         'payment_remarks',
