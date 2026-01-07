@@ -12,41 +12,45 @@ use App\Models\UserCategory;
 use Illuminate\Support\Facades\DB;
 
 use Illuminate\Support\Facades\Auth;
-
+use Yajra\DataTables\DataTables;
 class SaleController extends Controller
 {
 
+
 public function index(Request $request)
 {
-    $query = Sale::with(['user', 'customer'])->orderBy('created_at', 'desc');
     
-  
-    if ($request->has('search') && $request->search) {
-        $query->where(function ($query) use ($request) {
-            $query->where('id', 'like', '%' . $request->search . '%')
-                  ->orWhereHas('customer', function ($query) use ($request) {
-                      $query->where('name', 'like', '%' . $request->search . '%');
-                  });
-        });
+    if ($request->ajax()) {
+        $query = Sale::with(['user', 'customer'])
+                     ->withCount('items')
+                     ->orderBy('created_at', 'desc');
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('date', '<=', $request->date_to);
+        }
+
+        return DataTables::of($query)
+            ->addColumn('customer', fn($sale) => $sale->customer->name ?? 'Walk-in')
+            ->addColumn('user', fn($sale) => $sale->user->name ?? 'N/A')
+            ->addColumn('status', fn($sale) => $sale->returned 
+                ? '<span class="badge bg-danger">Returned</span>'
+                : '<span class="badge bg-success">Completed</span>')
+            ->editColumn('date', fn($sale) => $sale->date->format('d M Y h:i A'))
+            ->editColumn('subtotal', fn($sale) => number_format($sale->subtotal, 2))
+            ->editColumn('discount', fn($sale) => number_format($sale->discount, 2))
+            ->editColumn('afterdiscount', fn($sale) => number_format($sale->afterdiscount, 2))
+            ->editColumn('tax_amount', fn($sale) => number_format($sale->tax_amount, 2))
+            ->editColumn('total_amount', fn($sale) => number_format($sale->total_amount, 2))
+            ->editColumn('profit', fn($sale) => number_format($sale->profit, 2))
+            ->addColumn('actions', fn($sale) => view('user.sales.action', compact('sale'))->render())
+            ->rawColumns(['status','actions'])
+            ->make(true);
     }
 
-   
-    if ($request->has('date_from') && $request->date_from) {
-        $query->where('date', '>=', $request->date_from);
-    }
-
- 
-    if ($request->has('date_to') && $request->date_to) {
-        $query->where('date', '<=', $request->date_to);
-    }
-
-  
-    $sales = $query->paginate(20);
-    
-  
-    $categories = UserCategory::orderBy('name')->get();
-
-    return view('user.sales.index', compact('sales', 'categories'));
+    return view('user.sales.index');
 }
 
 
@@ -133,7 +137,7 @@ $paymentRemarks = $validated['payment_remarks'] ?? null;
 
     DB::beginTransaction();
     try {
-        // First, create the sale with placeholders
+        
         $sale = Sale::create([
             'customer_id' => $customerId,
             'subtotal'    => 0,
