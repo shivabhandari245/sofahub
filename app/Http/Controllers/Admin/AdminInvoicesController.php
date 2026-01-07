@@ -11,7 +11,7 @@ class AdminInvoicesController extends Controller
     // Show main invoices page
     public function index()
     {
-        return view('admin.invoices');
+        return view('admin.invoice.invoices');
     }
 
     // Return all sales as JSON for AJAX
@@ -45,6 +45,6 @@ class AdminInvoicesController extends Controller
     {
         $sale->load(['items.product', 'customer', 'user']);
 
-        return view('admin.viewinvoices', compact('sale'));
+        return view('admin.invoice.viewinvoices', compact('sale'));
     }
 }

@@ -24,8 +24,11 @@
                     <button type="button" id="resetBtn" class="btn btn-secondary">Reset</button>
                 </div>
                 <div class="col-md-3 text-end">
-                    <a href="{{ route('sales.create') }}" class="btn btn-success">
+                                        <a href="{{ route('sales.create') }}" class="btn btn-success">
                         <i class="fas fa-cash-register"></i> New Sale
+                    </a>
+                    <a href="{{ url('user/saleitems') }}" class="btn btn-success">
+                        <i class="fas fa-cash-list"></i> Sold Items
                     </a>
                 </div>
             </div>

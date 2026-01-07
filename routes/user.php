@@ -97,6 +97,9 @@ Route::prefix('invoices')->group(function () {
     Route::get('/{id}', [InvoicesController::class, 'show'])->name('user.invoices.show');
     Route::get('user/invoices/datatables', [InvoicesController::class, 'datatables'])->name('user.invoices.datatables');
    Route::get('invoices/{id}', [InvoicesController::class, 'print'])->name('user.invoices.show');
+
+    Route::patch('/paymentstatus/{sale}', [InvoicesController::class, 'updatePaymentStatus']);
+
 });
 
     // Dispatch

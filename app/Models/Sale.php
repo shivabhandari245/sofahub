@@ -6,20 +6,24 @@ use Illuminate\Database\Eloquent\Model;
 
 class Sale extends Model
 {
-    protected $fillable = [
+protected $fillable = [
     'user_id',
     'customer_id',
     'subtotal',
-    'tax_rate',      
-    'tax_amount',    
+    'tax_rate',
+    'tax_amount',
     'discount',
     'afterdiscount',
     'total_amount',
     'profit',
     'status',
-    'payment_method',    
-        'payment_remarks',
+
+    // 💳 payment
+    'payment_status',
+    'payment_method',
+    'payment_remarks',
 ];
+
 
 
 

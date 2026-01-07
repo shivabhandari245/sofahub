@@ -20,9 +20,11 @@ return new class extends Migration
             $table->decimal('profit', 12, 2)->default(0);
             $table->string('status')->default('completed');
             $table->json('payment_method')->nullable(); // store as JSON array
-$table->string('payment_remarks')->nullable();
-          $table->timestamp('date')->useCurrent();
-
+            $table->string('payment_remarks')->nullable();
+            $table->timestamp('date')->useCurrent();
+            $table->enum('payment_status', ['paid', 'unpaid', 'partially_paid'])
+                  ->default('unpaid')
+                  ->after('status');
             $table->timestamps();
 
             // Indexes
