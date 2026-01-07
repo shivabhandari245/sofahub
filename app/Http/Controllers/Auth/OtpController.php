@@ -67,22 +67,20 @@ class OtpController extends Controller
         };
     }
 
-  public function resend()
+public function resend(Request $request)
 {
     $userId = session('otp_user_id');
     $user = User::find($userId);
 
     if (!$user) {
-        return response()->json(['error' => 'User not found. Please login again.'], 404);
+        return redirect()->route('login')->withErrors(['otp' => 'User not found. Please login again.']);
     }
 
     $key = 'otp-resend:' . $user->id;
 
     if (! $this->otpService->canResend($user)) {
         $seconds = RateLimiter::availableIn($key);
-        return response()->json([
-            'error' => "Please wait {$seconds} seconds before resending OTP."
-        ], 429);
+        return back()->withErrors(['otp' => "Please wait {$seconds} seconds before resending OTP."]);
     }
 
     try {
@@ -90,14 +88,11 @@ class OtpController extends Controller
     } catch (\Exception $e) {
         Log::error('OTP resend failed for user '.$user->id.': '.$e->getMessage());
 
-        return response()->json([
-            'error' => 'Failed to resend OTP. Please try again later.'
-        ], 500);
+        return back()->withErrors(['otp' => 'Failed to resend OTP. Please try again later.']);
     }
 
-    return response()->json([
-        'message' => 'A new OTP has been sent to your email.'
-    ]);
+    return back()->with('message', 'A new OTP has been sent to your email.');
 }
+
 
 }

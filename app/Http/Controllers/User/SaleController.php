@@ -170,7 +170,7 @@ public function store(Request $request)
             'discount'        => $discount,
             'total_amount'    => 0,
             'profit'          => 0,
-            'user_id'         => auth()->id(),
+            'user_id'         => auth::id(),
             'status'          => 'completed',
 
             // 💳 Payment fields
@@ -211,17 +211,19 @@ public function store(Request $request)
       $afterDiscount = max(0, $subtotal - $discount); 
  $taxAmount = round($afterDiscount * ($taxRate / 100), 2);
  $totalAmount = round($afterDiscount + $taxAmount, 2);
+$profitAfterDiscount = max(0, $totalProfit - $discount);
 
+$sale->update([
+    'subtotal'          => $subtotal,
+    'afterdiscount'     => $afterDiscount,
+    'tax_rate'          => $taxRate,
+    'tax_amount'        => $taxAmount,
+    'total_amount'      => $totalAmount,
+    'profit'            => $totalProfit,
+    'profitafterdiscount'=> $profitAfterDiscount,
+]);
 
-        $sale->update([
-    'subtotal'      => $subtotal,
-    'afterdiscount' => $afterDiscount,
-    'tax_rate'      => $taxRate,
-    'tax_amount'    => $taxAmount,
-    'total_amount'  => $totalAmount,
-    'profit'        => $totalProfit,
-
- ]);
+       
 
         DB::commit();
 
