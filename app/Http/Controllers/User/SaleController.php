@@ -209,8 +209,8 @@ public function store(Request $request)
         }
 
       $afterDiscount = max(0, $subtotal - $discount); 
-$taxAmount = round($afterDiscount * ($taxRate / 100), 2);
-$totalAmount = round($afterDiscount + $taxAmount, 2);
+ $taxAmount = round($afterDiscount * ($taxRate / 100), 2);
+ $totalAmount = round($afterDiscount + $taxAmount, 2);
 
 
         $sale->update([
@@ -221,7 +221,7 @@ $totalAmount = round($afterDiscount + $taxAmount, 2);
     'total_amount'  => $totalAmount,
     'profit'        => $totalProfit,
 
-]);
+ ]);
 
         DB::commit();
 
