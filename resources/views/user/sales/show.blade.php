@@ -2,6 +2,7 @@
 
 @section('content')
 <div class="container-fluid">
+    <!-- Header -->
     <div class="row mb-4">
         <div class="col-md-12 d-flex justify-content-between align-items-center">
             <h1 class="h3 mb-0">Sale #{{ str_pad($sale->id, 6, '0', STR_PAD_LEFT) }}</h1>
@@ -56,6 +57,7 @@
 
         {{-- SALE INFO --}}
         <div class="col-md-4">
+            <!-- General Sale Info -->
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Sale Information</h5>
@@ -66,7 +68,7 @@
                     <table class="table table-sm">
                         <tr>
                             <th>Date:</th>
-                            <td>{{ $sale->date->format('M d, Y h:i A') }}</td>
+                            <td>{{ $sale->date?->format('M d, Y h:i A') }}</td>
                         </tr>
                         <tr>
                             <th>Cashier:</th>
@@ -109,7 +111,7 @@
             {{-- PAYMENT SUMMARY --}}
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">Payment Summary</h5>
+                    <h5 class="mb-0">Profit Summary</h5>
                 </div>
                 <div class="card-body">
                     <table class="table table-sm">
@@ -152,6 +154,7 @@
                     </table>
                 </div>
             </div>
+
         </div>
     </div>
 </div>

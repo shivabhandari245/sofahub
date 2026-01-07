@@ -44,7 +44,7 @@
         <table class="table table-bordered table-sm mb-0">
             <thead class="table-light text-center">
                 <tr>
-                    <th>#</th>
+                    <th>S.N</th>
                     <th>Product</th>
                     <th>Qty</th>
                     <th>Unit Price</th>

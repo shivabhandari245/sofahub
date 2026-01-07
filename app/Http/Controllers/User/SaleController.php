@@ -16,15 +16,14 @@ use Yajra\DataTables\DataTables;
 class SaleController extends Controller
 {
 
-
 public function index(Request $request)
 {
-    
     if ($request->ajax()) {
         $query = Sale::with(['user', 'customer'])
                      ->withCount('items')
                      ->orderBy('created_at', 'desc');
 
+        // Date filters
         if ($request->filled('date_from')) {
             $query->whereDate('date', '>=', $request->date_from);
         }
@@ -33,6 +32,18 @@ public function index(Request $request)
         }
 
         return DataTables::of($query)
+            // Global search for DataTables search box
+            ->filter(function ($query) use ($request) {
+                if ($request->has('search') && !empty($request->search['value'])) {
+                    $search = $request->search['value'];
+                    $query->where(function ($q) use ($search) {
+                        $q->where('id', 'like', "%{$search}%")
+                          ->orWhereHas('customer', function ($q2) use ($search) {
+                              $q2->where('name', 'like', "%{$search}%");
+                          });
+                    });
+                }
+            })
             ->addColumn('customer', fn($sale) => $sale->customer->name ?? 'Walk-in')
             ->addColumn('user', fn($sale) => $sale->user->name ?? 'N/A')
             ->addColumn('status', fn($sale) => $sale->returned 
@@ -45,6 +56,7 @@ public function index(Request $request)
             ->editColumn('tax_amount', fn($sale) => number_format($sale->tax_amount, 2))
             ->editColumn('total_amount', fn($sale) => number_format($sale->total_amount, 2))
             ->editColumn('profit', fn($sale) => number_format($sale->profit, 2))
+            ->editColumn('profitafterdiscount', fn($sale) => number_format($sale->profitafterdiscount ?? $sale->profit, 2))
             ->addColumn('actions', fn($sale) => view('user.sales.action', compact('sale'))->render())
             ->rawColumns(['status','actions'])
             ->make(true);
@@ -196,18 +208,20 @@ public function store(Request $request)
             $totalProfit += $itemProfit;
         }
 
-        $afterDiscount = max(0, $subtotal - $discount);
-        $taxAmount     = round($afterDiscount * ($taxRate / 100), 2);
-        $totalAmount   = round($afterDiscount + $taxAmount, 2);
+      $afterDiscount = max(0, $subtotal - $discount); 
+$taxAmount = round($afterDiscount * ($taxRate / 100), 2);
+$totalAmount = round($afterDiscount + $taxAmount, 2);
+
 
         $sale->update([
-            'subtotal'       => $subtotal,
-            'afterdiscount'  => $afterDiscount,
-            'tax_rate'       => $taxRate,
-            'tax_amount'     => $taxAmount,
-            'total_amount'   => $totalAmount,
-            'profit'         => $totalProfit,
-        ]);
+    'subtotal'      => $subtotal,
+    'afterdiscount' => $afterDiscount,
+    'tax_rate'      => $taxRate,
+    'tax_amount'    => $taxAmount,
+    'total_amount'  => $totalAmount,
+    'profit'        => $totalProfit,
+
+]);
 
         DB::commit();
 

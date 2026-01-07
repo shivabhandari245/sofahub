@@ -16,6 +16,7 @@ protected $fillable = [
     'afterdiscount',
     'total_amount',
     'profit',
+     'profitafterdiscount',
     'status',
 
     // 💳 payment
