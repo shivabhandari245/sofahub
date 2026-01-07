@@ -15,7 +15,12 @@
     margin-bottom: 24px;
     border: none;
 }
+.header-actionsflex{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 
+}
 .card-header {
     padding: 20px 24px;
     border-bottom: 1px solid #eaeaea;

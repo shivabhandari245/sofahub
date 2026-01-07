@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
+
 
 class BatchModel extends Model
 {
@@ -24,12 +26,26 @@ class BatchModel extends Model
         'status',
     ];
 
+    //  IMPORTANT
+    protected $appends = ['computed_status'];
 
     public function product()
     {
         return $this->belongsTo(BatchProductModel::class, 'batchproduct_id');
     }
 
-    
-   
+    /**
+     * Automatically compute delayed status
+     */
+    public function getComputedStatusAttribute()
+    {
+        if (
+            $this->status === 'Pending' &&
+            Carbon::parse($this->expected_completion)->lt(Carbon::today())
+        ) {
+            return 'Delayed';
+        }
+
+        return $this->status;
+    }
 }

@@ -21,7 +21,7 @@ class RawMaterialController extends Controller
             $materials = RawMaterialModel::with(['category', 'supplier', 'unit'])
                 ->orderBy('created_at', 'desc')
                 ->get();
-
+            $lowStockCount = RawMaterialModel::where('quantity','<',50)->count();
             $materialCategories = RawMaterialCategoryModel::orderBy('name', 'asc')->get();
             $suppliers = SupplierModel::orderBy('name', 'asc')->get();
             $units = UnitModel::orderBy('name', 'asc')->get();
@@ -30,7 +30,8 @@ class RawMaterialController extends Controller
                 'materials',
                 'materialCategories',
                 'suppliers',
-                'units'
+                'units',
+                'lowStockCount'
             ));
         } catch (\Exception $e) {
             Log::error('Error loading raw materials page: ' . $e->getMessage());

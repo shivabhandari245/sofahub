@@ -17,33 +17,60 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\JsonResponse;
+use Carbon\Carbon;
 
 class BatchController extends Controller
 {
+
+
 
 public function index(Request $request)
 {
     try {
         $search = $request->input('search');
-        $status = $request->input('status', 'Pending');
+        $status = $request->input('status');
 
+        //  STEP 1: Auto mark delayed batches in DB
+        BatchModel::where('status', 'Pending')
+            ->whereDate('expected_completion', '<', Carbon::today())
+            ->update(['status' => 'Delayed']);
+
+        //  STEP 2: Base query (include Delayed)
         $query = BatchModel::with(['product.category', 'product.quality'])
-            ->whereIn('status', ['Pending', 'In Progress']);
+            ->whereIn('status', ['Pending', 'Delayed', 'In Progress']);
 
+        // 🔍 Search filter
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('leader_name', 'LIKE', "%{$search}%")
-                  ->orWhereHas('product', fn($p) => $p->where('name', 'LIKE', "%{$search}%"));
+                  ->orWhereHas('product', function ($p) use ($search) {
+                      $p->where('name', 'LIKE', "%{$search}%");
+                  });
             });
         }
 
+        //  Optional status filter from dropdown
+    // Optional status filter from dropdown
+if ($status && $status !== 'all') {
+    $query->where('status', $status);
+}
+
+
+        // ⚡ AJAX response
         if ($request->ajax()) {
             return response()->json([
                 'success' => true,
-                'batches' => $query->latest()->get()
+                'batches' => $query->latest()->get(),
+                'summary' => [
+                    'totalBatches'   => BatchModel::count(),
+                    'savedProducts'  => BatchProductModel::count(), // 🔹 Added
+                    'pending'        => BatchModel::where('status', 'Pending')->count(),
+                    'delayed'        => BatchModel::where('status', 'Delayed')->count(),
+                ]
             ]);
         }
 
+        // 🧾 Page load data
         $batchproducts = BatchProductModel::latest()->get();
         $productcategories = ProductCategoryModel::latest()->get();
         $productqualities = ProductQualityModel::latest()->get();
@@ -58,6 +85,7 @@ public function index(Request $request)
         abort(500);
     }
 }
+
 
 
 

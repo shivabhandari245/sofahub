@@ -26,34 +26,33 @@
             <p id="totalBatches">0</p>
         </div>
         <div class="summary-card">
-            <h3>In Progress</h3>
-            <p id="inProgress">0</p>
+            <h3>Saved Products</h3>
+            <p id="savedProducts">0</p>
         </div>
-        <div class="summary-card">
-            <h3>Completed</h3>
-            <p id="completed">0</p>
-        </div>
-        <div class="summary-card">
+         <div class="summary-card">
             <h3>Pending</h3>
             <p id="pending">0</p>
         </div>
+        <div class="summary-card">
+            <h3>Delayed</h3>
+            <p id="delayed">0</p>
+        </div>
+       
     </div>
 
     <div class="header-actionsflex">
         <button class="btn-add" onclick="openBatchModal()">
             <i class="bi bi-plus-circle"></i> Add New Batch
         </button>
+         <input type="text" id="searchInput" placeholder="🔍 Search batches..." />
+
         <div class="searchcard">
             <div class="search-form">
-                <input type="text" id="searchInput" placeholder="🔍 Search batches..." />
                 <select id="filterStatus">
                     <option value="all">All Status</option>
                     <option value="Pending">Pending</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Completed">Completed</option>
                     <option value="Delayed">Delayed</option>
                 </select>
-                <button type="button" onclick="loadBatches()">Search</button>
             </div>
         </div>
     </div>

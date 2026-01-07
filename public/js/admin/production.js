@@ -1,6 +1,18 @@
 $(document).ready(function() {
     ProductionManager.init();
+
+    // Summary card click filters
+    $('#pending').on('click', () => {
+        $('#filterStatus').val('Pending');
+        ProductionManager.loadBatches();
+    });
+
+    $('#delayed').on('click', () => {
+        $('#filterStatus').val('Delayed');
+        ProductionManager.loadBatches();
+    });
 });
+
 
 const ProductionManager = {
 init: function() {
@@ -9,41 +21,47 @@ init: function() {
     this.setupEventListeners();
     this.initializeDatePickers();
 
-    $('#filterStatus').prop('disabled', true);
 },
 
 
-    setupEventListeners: function() {
-        // Form submissions
-        $('#batchForm').on('submit', (e) => this.submitBatchForm(e));
-        $('#addProductForm').on('submit', (e) => this.addProduct(e));
-        $('#addCategoryForm').on('submit', (e) => this.addCategory(e));
-        $('#addQualityForm').on('submit', (e) => this.addQuality(e));
-        $('#costForm').on('submit', (e) => this.completeBatchWithCost(e));
-        
-        // Search and filter
-        $('#searchInput').on('keyup', (e) => {
-            if (e.key === 'Enter') this.loadBatches();
-        });
-        $('#filterStatus').on('change', () => this.loadBatches());
-        
-        // Button clicks
-        $(document).on('click', '.btn-edit', (e) => {
-            const batchId = $(e.currentTarget).closest('tr').data('batch-id');
-            this.editBatch(batchId);
-        });
-        
-        $(document).on('click', '.btn-delete', (e) => {
-            const batchId = $(e.currentTarget).closest('tr').data('batch-id');
-            this.deleteBatch(batchId);
-        });
-        
-        // Complete button
-        $(document).on('click', '.btn-complete', function() {
-            const batchId = $(this).closest('tr').data('batch-id');
-            ProductionManager.openCostModal(batchId);
-        });
-    },
+setupEventListeners: function() {
+    // Form submissions
+    $('#batchForm').on('submit', (e) => this.submitBatchForm(e));
+    $('#addProductForm').on('submit', (e) => this.addProduct(e));
+    $('#addCategoryForm').on('submit', (e) => this.addCategory(e));
+    $('#addQualityForm').on('submit', (e) => this.addQuality(e));
+    $('#costForm').on('submit', (e) => this.completeBatchWithCost(e));
+    
+    // Live search without Enter
+    let searchTimeout;
+    $('#searchInput').on('keyup', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            this.loadBatches();
+        }, 300); // delay 300ms after typing
+    });
+
+    // Filter dropdown
+    $('#filterStatus').on('change', () => this.loadBatches());
+    
+    // Button clicks
+    $(document).on('click', '.btn-edit', (e) => {
+        const batchId = $(e.currentTarget).closest('tr').data('batch-id');
+        this.editBatch(batchId);
+    });
+    
+    $(document).on('click', '.btn-delete', (e) => {
+        const batchId = $(e.currentTarget).closest('tr').data('batch-id');
+        this.deleteBatch(batchId);
+    });
+    
+    // Complete button
+    $(document).on('click', '.btn-complete', function() {
+        const batchId = $(this).closest('tr').data('batch-id');
+        ProductionManager.openCostModal(batchId);
+    });
+},
+
 
     // Cost modal methods
     openCostModal: function(batchId) {
@@ -126,22 +144,31 @@ completeBatchWithCost: function(e) {
 
 loadBatches: function() {
     const search = $('#searchInput').val();
+    const status = $('#filterStatus').val();
 
     this.showLoader('#batchBody');
+
+    // Send null for 'all' to backend
+    const statusParam = status === 'all' ? '' : status;
 
     $.ajax({
         url: '/admin/production',
         method: 'GET',
-        data: { search, ajax: true },
+        data: { search, status: statusParam, ajax: true },
         success: (response) => {
             if (response.batches) {
-                this.renderBatches(response.batches);
-                this.updateSummaryCounts(response.batches);
+                this.renderBatches(response.batches); // ✅ just render what backend gives
+
+                if (response.summary) {
+                    this.updateSummaryCounts(response.summary);
+                }
             }
         },
         error: () => this.showError('#batchBody', 'Failed to load data')
     });
 },
+
+
 
 
 
@@ -153,43 +180,52 @@ loadBatches: function() {
         $('#batchBody').html(html);
     },
 
-    batchRowTemplate: function(batch, index) {
-        const statusClass = batch.status.toLowerCase().replace(' ', '-');
-        const startDate = this.formatDate(batch.start_date);
-        const completionDate = this.formatDate(batch.expected_completion);
-        const isPending = batch.status === 'Pending';
-        
-        return `
-            <tr data-batch-id="${batch.id}">
-                <td>${index + 1}</td>
-                <td>${batch.product?.name || 'N/A'}</td>
-                <td>${batch.product?.category?.name || 'N/A'}</td>
-                <td>${batch.product?.quality?.name || 'N/A'}</td>
-                <td>${batch.leader_name}</td>
-                <td>${batch.quantity}</td>
-                <td>${batch.expected_unit_cost ? 'NPR ' + this.formatCurrency(batch.expected_unit_cost) : '-'}</td>
-                <td>${batch.total_cost ? 'NPR ' + this.formatCurrency(batch.total_cost) : '-'}</td>
-                <td>${startDate}</td>
-                <td>${completionDate}</td>
-                <td><span class="status-badge status-${statusClass}">${batch.status}</span></td>
-                <td>
-                    <div class="action-buttons">
-                        ${isPending ? `
-                            <button class="btn-sm btn-edit" title="Edit">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="btn-sm btn-complete" title="Mark Complete">
-                                <i class="bi bi-check-circle"></i>
-                            </button>
-                        ` : ''}
-                        <button class="btn-sm btn-delete" title="Delete">
-                            <i class="bi bi-trash"></i>
+batchRowTemplate: function(batch, index) {
+    const status = batch.status; // 🔥 from DB
+    const statusClass = status.toLowerCase().replace(/\s+/g, '-');
+
+    const startDate = this.formatDate(batch.start_date);
+    const completionDate = this.formatDate(batch.expected_completion);
+
+    // Editable for Pending & Delayed
+    const isEditable = status === 'Pending' || status === 'Delayed';
+
+    return `
+        <tr data-batch-id="${batch.id}">
+            <td>${index + 1}</td>
+            <td>${batch.product?.name || 'N/A'}</td>
+            <td>${batch.product?.category?.name || 'N/A'}</td>
+            <td>${batch.product?.quality?.name || 'N/A'}</td>
+            <td>${batch.leader_name}</td>
+            <td>${batch.quantity}</td>
+            <td>${batch.expected_unit_cost ? 'NPR ' + this.formatCurrency(batch.expected_unit_cost) : '-'}</td>
+            <td>${batch.total_cost ? 'NPR ' + this.formatCurrency(batch.total_cost) : '-'}</td>
+            <td>${startDate}</td>
+            <td>${completionDate}</td>
+            <td>
+                <span class="status-badge status-${statusClass}">
+                    ${status}
+                </span>
+            </td>
+            <td>
+                <div class="action-buttons">
+                    ${isEditable ? `
+                        <button class="btn-sm btn-edit" title="Edit">
+                            <i class="bi bi-pencil"></i>
                         </button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    },
+                        <button class="btn-sm btn-complete" title="Mark Complete">
+                            <i class="bi bi-check-circle"></i>
+                        </button>
+                    ` : ''}
+                    <button class="btn-sm btn-delete" title="Delete">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `;
+},
+
 
     formatCurrency: function(amount) {
         return parseFloat(amount || 0).toLocaleString('en-IN', {
@@ -206,11 +242,14 @@ loadBatches: function() {
         });
     },
 
-updateSummaryCounts: function(batches) {
-    $('#totalBatches').text(batches.length);
-    $('#pending').text(batches.filter(b => b.status === 'Pending').length);
-    $('#completed').text('—'); // or hide it
+updateSummaryCounts: function(summary) {
+    $('#totalBatches').text(summary.totalBatches || 0);
+    $('#pending').text(summary.pending || 0);
+    $('#delayed').text(summary.delayed || 0);
+    $('#savedProducts').text(summary.savedProducts || 0);
 },
+
+
 
 
     loadDropdownData: function() {
