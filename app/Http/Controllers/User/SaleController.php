@@ -129,45 +129,59 @@ public function getCustomers(Request $request)
 
 public function store(Request $request)
 {
-   
     $validated = $request->validate([
-    'customer_id'     => 'required|exists:customers,id',
-    'cartItems'       => 'required|json',
-    'tax_rate'        => 'nullable|numeric|min:0|max:100',
-    'discount'        => 'nullable|numeric|min:0',
-    'payment_method'  => 'nullable|string', 
-    'payment_remarks' => 'nullable|string', 
-]);
+        'customer_id'     => 'required|exists:customers,id',
+        'cartItems'       => 'required|json',
+        'tax_rate'        => 'nullable|numeric|min:0|max:100',
+        'discount'        => 'nullable|numeric|min:0',
+        'payment_method'  => 'nullable|string',
+        'payment_remarks' => 'nullable|string',
+        'payment_status'  => 'required|in:paid,unpaid,partially_paid',
+    ]);
 
-$paymentMethod  = $validated['payment_method'] ?? null; 
-$paymentRemarks = $validated['payment_remarks'] ?? null; 
+    $paymentMethod   = $validated['payment_method'] ?? null;
+    $paymentRemarks  = $validated['payment_remarks'] ?? null;
+    $paymentStatus   = $validated['payment_status'];
 
-    $cartItems = json_decode($validated['cartItems'], true);
-    $taxRate   = $validated['tax_rate'] ?? 0;   
-    $discount  = $validated['discount'] ?? 0;  
+    // Business rule enforcement
+    if ($paymentStatus === 'unpaid') {
+        $paymentMethod  = null;
+        $paymentRemarks = null;
+    }
+
+    if ($paymentStatus === 'paid' && empty($paymentMethod)) {
+        throw new \Exception('Payment method is required for paid sales.');
+    }
+
+    $cartItems  = json_decode($validated['cartItems'], true);
+    $taxRate    = $validated['tax_rate'] ?? 0;
+    $discount   = $validated['discount'] ?? 0;
     $customerId = $validated['customer_id'];
 
     DB::beginTransaction();
+
     try {
-        
+
         $sale = Sale::create([
-            'customer_id' => $customerId,
-            'subtotal'    => 0,
-            'tax_rate'    => $taxRate,
-            'tax_amount'  => 0,
-            'discount'    => $discount,
-            'total_amount'=> 0,
-            'profit'      => 0,
-            'user_id'     => auth::id(),
-            'status'      => 'completed',
-            'payment_method' => $paymentMethod,
-    'payment_remarks' => $paymentRemarks,
+            'customer_id'     => $customerId,
+            'subtotal'        => 0,
+            'tax_rate'        => $taxRate,
+            'tax_amount'      => 0,
+            'discount'        => $discount,
+            'total_amount'    => 0,
+            'profit'          => 0,
+            'user_id'         => auth()->id(),
+            'status'          => 'completed',
+
+            // 💳 Payment fields
+            'payment_status'  => $paymentStatus,
+            'payment_method'  => $paymentMethod,
+            'payment_remarks' => $paymentRemarks,
         ]);
 
-        $subtotal   = 0;
-        $totalProfit= 0;
+        $subtotal     = 0;
+        $totalProfit  = 0;
 
-       
         foreach ($cartItems as $item) {
             $product = ProductModel::findOrFail($item['product_id']);
 
@@ -181,25 +195,23 @@ $paymentRemarks = $validated['payment_remarks'] ?? null;
             $itemProfit   = ($item['unit_price'] - $product->cost_per_product) * $item['quantity'];
 
             SaleItem::create([
-                'sale_id'     => $sale->id,
-                'product_id'  => $product->id,
-                'quantity'    => $item['quantity'],
-                'unit_price'  => $item['unit_price'],
-                'cost_price'  => $product->cost_per_product,
-                'subtotal'    => $itemSubtotal,
-                'profit'      => $itemProfit,
+                'sale_id'    => $sale->id,
+                'product_id' => $product->id,
+                'quantity'   => $item['quantity'],
+                'unit_price' => $item['unit_price'],
+                'cost_price' => $product->cost_per_product,
+                'subtotal'   => $itemSubtotal,
+                'profit'     => $itemProfit,
             ]);
 
             $subtotal    += $itemSubtotal;
-
             $totalProfit += $itemProfit;
         }
 
       $afterDiscount = max(0, $subtotal - $discount); 
-$taxAmount = round($afterDiscount * ($taxRate / 100), 2);
-$totalAmount = round($afterDiscount + $taxAmount, 2);
+ $taxAmount = round($afterDiscount * ($taxRate / 100), 2);
+ $totalAmount = round($afterDiscount + $taxAmount, 2);
 
-$profitAfterDiscount = max(0, $totalProfit - $discount);
 
         $sale->update([
     'subtotal'      => $subtotal,
@@ -208,32 +220,25 @@ $profitAfterDiscount = max(0, $totalProfit - $discount);
     'tax_amount'    => $taxAmount,
     'total_amount'  => $totalAmount,
     'profit'        => $totalProfit,
-    'profitafterdiscount' => $profitAfterDiscount,
 
-]);
+ ]);
 
         DB::commit();
 
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Sale processed successfully.',
-                'sale_id' => $sale->id,
-            ]);
-        }
-
-        return redirect()->route('user.sales.show', $sale->id)
-                         ->with('success', 'Sale processed successfully.');
+        return redirect()
+            ->route('user.sales.show', $sale->id)
+            ->with('success', 'Sale processed successfully.');
 
     } catch (\Exception $e) {
         DB::rollBack();
+
         return response()->json([
             'success' => false,
             'message' => 'Failed to process sale: ' . $e->getMessage(),
         ], 400);
     }
-
 }
+
 
 
 public function show(Sale $sale)

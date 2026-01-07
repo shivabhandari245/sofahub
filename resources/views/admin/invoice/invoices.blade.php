@@ -6,63 +6,63 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/admincss/invoices.css') }}" />
 <style>
-.summary {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 20px;
-}
+    .summary {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
 
-.summary-card {
-    background: #f5f5f5;
-    padding: 15px;
-    border-radius: 8px;
-    flex: 1;
-    text-align: center;
-}
+    .summary-card {
+        background: #f5f5f5;
+        padding: 15px;
+        border-radius: 8px;
+        flex: 1;
+        text-align: center;
+    }
 
-.top-actions {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 20px;
-    align-items: center;
-}
+    .top-actions {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        align-items: center;
+    }
 
-.search-filter input,
-.search-filter select {
-    padding: 7px;
-    margin-left: 10px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-}
+    .search-filter input,
+    .search-filter select {
+        padding: 7px;
+        margin-left: 10px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+    }
 
-.table-container {
-    overflow-x: auto;
-}
+    .table-container {
+        overflow-x: auto;
+    }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
 
-table th,
-table td {
-    padding: 10px;
-    border: 1px solid #ddd;
-    text-align: left;
-    white-space: nowrap;
-}
+    table th,
+    table td {
+        padding: 10px;
+        border: 1px solid #ddd;
+        text-align: left;
+        white-space: nowrap;
+    }
 
-.btn-view {
-    background-color: #2196F3;
-    color: white;
-    padding: 5px 10px;
-    border-radius: 4px;
-    text-decoration: none;
-}
+    .btn-view {
+        background-color: #2196F3;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        text-decoration: none;
+    }
 
-.btn-view:hover {
-    background-color: #1976D2;
-}
+    .btn-view:hover {
+        background-color: #1976D2;
+    }
 </style>
 @endpush
 

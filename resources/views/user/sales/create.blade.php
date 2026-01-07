@@ -258,6 +258,61 @@
 <input type="hidden" name="payment_remarks" id="paymentRemarksInput">
 
                             <input type="hidden" name="cartItems" id="cartItemsInput">
+
+
+                            <!-- Payment Status -->
+<div class="card mb-3">
+    <div class="card-header bg-light py-2">
+        <h6 class="mb-0">
+            <i class="fas fa-receipt me-1"></i> Payment Status
+        </h6>
+    </div>
+
+    <div class="card-body p-3">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="form-check">
+                    <input class="form-check-input payment-status"
+                           type="radio"
+                           name="payment_status"
+                           id="statusPaid"
+                           value="paid">
+                    <label class="form-check-label" for="statusPaid">
+                        ✅ Paid
+                    </label>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="form-check">
+                    <input class="form-check-input payment-status"
+                           type="radio"
+                           name="payment_status"
+                           id="statusPartial"
+                           value="partially_paid">
+                    <label class="form-check-label" for="statusPartial">
+                        🟡 Partially Paid
+                    </label>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="form-check">
+                    <input class="form-check-input payment-status"
+                           type="radio"
+                           name="payment_status"
+                           id="statusUnpaid"
+                           value="unpaid"
+                           checked>
+                    <label class="form-check-label" for="statusUnpaid">
+                        ❌ Unpaid
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
                             <button type="submit" class="btn btn-success w-100 btn-lg" id="checkoutBtn" disabled>
                                 <i class="fas fa-check-circle me-2"></i>Process Sale
                             </button>
@@ -737,6 +792,37 @@ $('#confirmAdd').click(function () {
     }
 });
 
+//payment method validation
+function validatePaymentStatus() {
+    const status = $('input[name="payment_status"]:checked').val();
+
+    if (!status) {
+        showError('Please select payment status.');
+        return false;
+    }
+
+    // If paid → at least one payment method must be selected
+    if (status === 'paid' && $('.payment-check:checked').length === 0) {
+        showError('Please select payment method for paid sale.');
+        return false;
+    }
+
+    // If unpaid → no payment method required
+    return true;
+}
+
+//ui if unpaid
+
+$('input[name="payment_status"]').on('change', function () {
+    const status = $(this).val();
+
+    if (status === 'unpaid') {
+        $('.payment-check').prop('checked', false).prop('disabled', true);
+        $('#paymentRemarksRow').slideUp();
+    } else {
+        $('.payment-check').prop('disabled', false);
+    }
+});
 
 /* ===============================
    CART RENDER
@@ -1030,7 +1116,8 @@ $('#addCustomerForm').submit(function(e) {
         });
 });
 
-$('#checkoutForm').on('submit', function(e) {
+$('#checkoutForm').on('submit', function (e) {
+
     if (cart.length === 0) {
         e.preventDefault();
         showError('Your cart is empty.');
@@ -1048,14 +1135,20 @@ $('#checkoutForm').on('submit', function(e) {
         return;
     }
 
-   
-    const selectedPayments = $('.payment-check:checked').map(function() {
+    if (!validatePaymentStatus()) {
+        e.preventDefault();
+        return;
+    }
+
+    // collect payment methods
+    const selectedPayments = $('.payment-check:checked').map(function () {
         return $(this).val();
     }).get();
 
     $('#paymentMethodInput').val(JSON.stringify(selectedPayments));
     $('#paymentRemarksInput').val($('#paymentRemarks').val());
 });
+
 
 
 /* ===============================

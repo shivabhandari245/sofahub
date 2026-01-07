@@ -14,6 +14,14 @@ body {
     min-height: 100vh;
     overflow-y: auto; /* ensures scroll works on small screens */
 }
+/* Fix modal z-index */
+.modal {
+    z-index: 1200 !important; /* must be higher than top-nav */
+}
+
+.modal-backdrop {
+    z-index: 1150 !important;
+}
 
 /* ========== SIDEBAR - UPDATED STYLE ========== */
 .sidebar {
