@@ -34,7 +34,8 @@
                                     <th>Quantity</th>
                                     <th>Unit Price</th>
                                     <th>Subtotal</th>
-                                    <th>Profit</th>
+                                    <th>GrossProfit</th>
+                                     <th>Profit After Discount</th>
                                     <th>status</th>
                                 </tr>
                             </thead>
@@ -48,6 +49,12 @@
                                     <td class="{{ $item->profit >= 0 ? 'text-success' : 'text-danger' }}">
                                         {{ number_format($item->profit, 2) }}
                                     </td>
+                                                                  <td class="text-center {{ $sale->profitafterdiscount >= 0 ? 'text-success' : 'text-danger' }}">
+                                        {{ number_format($sale->profitafterdiscount, 2) }}
+                                        </td>
+
+
+
                                     <td>{{ $item->status }}</td>
                                 </tr>
                                 @endforeach
@@ -130,9 +137,16 @@
                             <td class="text-end">{{ number_format($sale->total_amount, 2) }}</td>
                         </tr>
                         <tr>
-                            <th>Profit:</th>
+                            <th>Gross Profit:</th>
                             <td class="text-end {{ $sale->profit >= 0 ? 'text-success' : 'text-danger' }}">
                                 {{ number_format($sale->profit, 2) }}
+                            </td>
+                        </tr>
+
+                         <tr>
+                            <th>Profit After Discount:</th>
+                            <td class="text-end {{ $sale->profitafterdiscount >= 0 ? 'text-success' : 'text-danger' }}">
+                                {{ number_format($sale->profitafterdiscount, 2) }}
                             </td>
                         </tr>
 

@@ -15,7 +15,7 @@
         <div class="settings-card">
             <h3><i class="bi bi-person-circle"></i> Profile Information</h3>
             
-            <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6">
+            <form method="post" action="{{ route('user.profile.update') }}" class="mt-6 space-y-6">
                 @csrf
                 @method('patch')
 
@@ -49,7 +49,7 @@
         <div class="settings-card">
             <h3><i class="bi bi-shield-lock"></i> Update Password</h3>
             
-            <form method="post" action="{{ route('password.update') }}" class="mt-6 space-y-6">
+            <form method="post" action="{{ route('user.profile.updatePassword') }}" class="mt-6 space-y-6">
                 @csrf
                 @method('put')
 

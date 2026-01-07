@@ -35,7 +35,7 @@
                                     <th>Quantity</th>
                                     <th>Unit Price</th>
                                     <th>Subtotal</th>
-                                    <th>Profit</th>
+                                    <th>GrossProfit</th>
                                     <th>Profit After Discount</th>
                                     <th>Status</th>
                                 </tr>

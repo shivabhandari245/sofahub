@@ -25,12 +25,12 @@ Route::prefix('user')->middleware(['auth', RoleMiddleware::using('user')])->grou
         Route::get('/dashboard/data', [DashboardController::class, 'getDashboardData'])->name('user.dashboard.data');  
 
     // Profile
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/editprofile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::put('/updatepassword', [ProfileController::class, 'updatePassword'])->name('profile.updatePassword');
-    Route::delete('/deleteprofile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('user.profile.edit');
+    Route::patch('/editprofile', [ProfileController::class, 'update'])->name('user.profile.update');
+    Route::put('/updatepassword', [ProfileController::class, 'updatePassword'])->name('user.profile.updatePassword');
+    Route::delete('/deleteprofile', [ProfileController::class, 'destroy'])->name('user.profile.destroy');
     Route::post('/email/verification-notification', [ProfileController::class, 'sendEmailVerification'])
-        ->name('verification.send');
+        ->name('user.verification.send');
 
    //sales
 

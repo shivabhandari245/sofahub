@@ -1,7 +1,9 @@
 @extends('layouts.user')
 
 @push('styles')
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
 @endpush
 
 @section('content')
@@ -10,20 +12,19 @@
     <!-- Filters -->
     <div class="card mb-4">
         <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <input type="text" id="searchInput" class="form-control" placeholder="Search by ID or Customer">
-                </div>
+            <div class="row g-3 align-items-end">
                 <div class="col-md-2">
+                    <label for="dateFrom" class="form-label">From Date</label>
                     <input type="date" id="dateFrom" class="form-control" max="{{ date('Y-m-d') }}">
                 </div>
                 <div class="col-md-2">
+                    <label for="dateTo" class="form-label">To Date</label>
                     <input type="date" id="dateTo" class="form-control" max="{{ date('Y-m-d') }}">
                 </div>
-                <div class="col-md-2 d-flex gap-1">
+                <div class="col-md-2">
                     <button type="button" id="resetBtn" class="btn btn-secondary">Reset</button>
                 </div>
-                <div class="col-md-3 text-end">
+                <div class="col-md-6 text-end">
                     <a href="{{ route('sales.create') }}" class="btn btn-success">
                         <i class="fas fa-cash-register"></i> New Sale
                     </a>
@@ -63,56 +64,68 @@
 @endsection
 
 @push('scripts')
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
 
 <script>
-$(document).ready(function() {
-    const table = $('#salesTable').DataTable({
-        processing: true,
-        serverSide: true,
-          searching: false,
-        ajax: {
-            url: "{{ route('sales.index') }}",
-            data: function(d) {
-                d.search = $('#searchInput').val();
-                d.date_from = $('#dateFrom').val();
-                d.date_to = $('#dateTo').val();
-            }
-        },
-        columns: [
-            { data: 'id' },
-            { data: 'date' },
-            { data: 'customer' },
-            { data: 'user' },
-            { data: 'items_count', searchable: false },
-            { data: 'subtotal', render: data => parseFloat(data).toFixed(2) },
-            { data: 'discount', render: data => parseFloat(data).toFixed(2) },
-            { data: 'afterdiscount', render: data => parseFloat(data).toFixed(2) },
-            { data: 'tax_amount', render: data => parseFloat(data).toFixed(2) },
-            { data: 'total_amount', render: data => parseFloat(data).toFixed(2) },
-            { data: 'profit', render: data => parseFloat(data).toFixed(2) },
-            { data: 'payment_method' },
-            { data: 'status' },
-            { data: 'actions', orderable: false, searchable: false }
-        ],
-        order: [[1,'desc']],
-        pageLength: 20,
-        lengthMenu: [10, 20, 50, 100]
-    });
+let table;
 
-   
-    $('#searchInput, #dateFrom, #dateTo').on('keyup change', function() {
+$(document).ready(function() {
+
+    // Initialize DataTable only once
+    if ($.fn.DataTable.isDataTable('#salesTable')) {
+        table = $('#salesTable').DataTable();
+    } else {
+        table = $('#salesTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: "{{ route('sales.index') }}",
+                data: function(d) {
+                    d.date_from = $('#dateFrom').val();
+                    d.date_to = $('#dateTo').val();
+                }
+            },
+            columns: [
+                { data: 'id' },
+                { data: 'date' },
+                { data: 'customer' },
+                { data: 'user' },
+                { data: 'items_count', searchable: false },
+                { data: 'subtotal', render: data => parseFloat(data).toFixed(2) },
+                { data: 'discount', render: data => parseFloat(data).toFixed(2) },
+                { data: 'afterdiscount', render: data => parseFloat(data).toFixed(2) },
+                { data: 'tax_amount', render: data => parseFloat(data).toFixed(2) },
+                { data: 'total_amount', render: data => parseFloat(data).toFixed(2) },
+                { data: 'profit', render: data => parseFloat(data).toFixed(2) },
+                { data: 'payment_method' },
+                { data: 'status' },
+                { data: 'actions', orderable: false, searchable: false }
+            ],
+            order: [[1,'desc']],
+            pageLength: 20,
+            lengthMenu: [10, 20, 50, 100],
+            responsive: true,
+            searching: true // enable built-in search
+        });
+    }
+
+    // Date filters
+    $('#dateFrom, #dateTo').on('change', function() {
         table.draw();
     });
 
-    // Reset button
+    // Reset filters and search
     $('#resetBtn').click(function() {
-        $('#searchInput').val('');
         $('#dateFrom').val('');
         $('#dateTo').val('');
-        table.draw();
+        table.search('').columns().search('').draw();
     });
+
 });
 </script>
 @endpush
