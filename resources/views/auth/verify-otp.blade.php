@@ -42,72 +42,94 @@
         #resend-alert { color: darkorange; font-weight: bold; }
     </style>
 
-    <script>
-        const resendBtn = document.getElementById('resend-btn');
-        const countdownText = document.getElementById('countdown-text');
-        const resendMessage = document.getElementById('resend-message');
-        const resendAlert = document.getElementById('resend-alert');
+   <script>
+    const resendBtn = document.getElementById('resend-btn');
+    const countdownText = document.getElementById('countdown-text');
+    const resendMessage = document.getElementById('resend-message');
+    const resendAlert = document.getElementById('resend-alert');
 
-        let countdown = 0;
-        let interval;
+    let countdown = 0;
+    let interval = null;
 
-        function startCountdown(seconds) {
-            countdown = seconds;
-            resendBtn.disabled = true;
+    function clearCountdown() {
+        if (interval) {
+            clearInterval(interval);
+            interval = null;
+        }
+    }
+
+    function startCountdown(seconds) {
+        clearCountdown();
+
+        countdown = seconds;
+        resendBtn.disabled = true;
+        updateCountdownText();
+
+        interval = setInterval(() => {
+            countdown--;
+
+            if (countdown <= 0) {
+                clearCountdown();
+                resendBtn.disabled = false;
+                countdownText.textContent = '';
+                resendAlert.style.display = 'none';
+                return;
+            }
+
             updateCountdownText();
+        }, 1000);
+    }
 
-            interval = setInterval(() => {
-                countdown--;
-                updateCountdownText();
+    function updateCountdownText() {
+        countdownText.textContent = countdown > 0 ? ` (${countdown}s)` : '';
+    }
 
-                if (countdown <= 0) {
-                    clearInterval(interval);
-                    resendBtn.disabled = false;
-                    countdownText.textContent = '';
-                    resendAlert.style.display = 'none';
+    resendBtn.addEventListener('click', function () {
+        resendBtn.disabled = true; 
+        resendMessage.textContent = '';
+        resendAlert.style.display = 'none';
+
+        fetch("{{ route('otp.resend') }}", {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw response;
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.message) {
+                resendMessage.textContent = data.message;
+                resendMessage.style.color = 'green';
+                startCountdown(30);
+            } else if (data.error) {
+                resendAlert.textContent = data.error;
+                resendAlert.style.display = 'block';
+
+                const match = data.error.match(/(\d+)\s*seconds?/);
+                if (match) {
+                    startCountdown(parseInt(match[1], 10));
                 }
-            }, 1000);
-        }
+            }
+        })
+        .catch(async (err) => {
+            resendBtn.disabled = false;
 
-        function updateCountdownText() {
-            countdownText.textContent = countdown > 0 ? ` (${countdown}s)` : '';
-        }
+            try {
+                const data = await err.json();
+                resendAlert.textContent = data.message || 'Too many requests. Please wait.';
+            } catch {
+                resendAlert.textContent = 'Server error. Please try again later.';
+            }
 
-        resendBtn.addEventListener('click', function() {
-            resendMessage.textContent = '';
-            resendAlert.style.display = 'none';
-            fetch("{{ route('otp.resend') }}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({})
-            })
-            .then(response => response.json())
-            .then(data => {
-                if(data.message) {
-                    resendMessage.textContent = data.message;
-                    resendMessage.style.color = 'green';
-                    startCountdown(30);
-                } else if(data.error) {
-                    resendMessage.textContent = '';
-                    resendAlert.textContent = data.error;
-                    resendAlert.style.display = 'block';
-
-                   
-                    const match = data.error.match(/(\d+) seconds/);
-                    if(match) {
-                        startCountdown(parseInt(match[1]));
-                    } else {
-                        resendBtn.disabled = true;
-                    }
-                }
-            })
-            .catch(err => {
-                resendMessage.textContent = 'Something went wrong.';
-                resendMessage.style.color = 'red';
-            });
+            resendAlert.style.display = 'block';
         });
-    </script>
+    });
+</script>
+
 </x-guest-layout>

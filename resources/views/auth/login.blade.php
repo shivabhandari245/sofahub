@@ -3,7 +3,7 @@
     <div class="login-container">
         <h2 class="login-title">Welcome Back</h2>
 
-        <!-- Display all error messages -->
+       
         @if (session('error'))
             <div class="login-status-message login-status-error">
                 {{ session('error') }}
