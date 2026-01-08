@@ -56,6 +56,8 @@ Route::get('products/ajax', [SaleController::class, 'ajaxList'])->name('user.pro
 
  Route::get('/saleitems', [SaleItemController::class, 'index'])->name('saleitems.index');
 Route::post('/saleitems/return/{id}', [SaleItemController::class, 'returnItem'])->name('saleitems.return');
+Route::get('user/saleitems/list', [SaleItemController::class, 'getSaleItems'])
+    ->name('user.saleitems.list');
 
 
 Route::get('/customers/search', [UserCustomerController::class, 'search'])->name('user.customers.search');
@@ -81,7 +83,8 @@ Route::get('customers/ajax-search', [SaleController::class, 'getCustomers'])->na
   Route::get('/purchase/latest', [UserPurchaseController::class, 'latestPurchases'])->name('user.purchase.latest');
 
     Route::get('/latest', [UserPurchaseController::class, 'latestPurchases'])->name('user.purchase.latest');
-    Route::get('/purchase/{id}/edit', [UserPurchaseController::class, 'edit'])->name('purchase.edit');
+Route::get('purchases/{purchase}/edit', [UserPurchaseController::class, 'edit'])->name('user.purchase.edit');
+
      Route::put('/purchase/{id}', [UserPurchaseController::class, 'update'])->name('purchase.update');  
     Route::delete('/purchase/{id}', [UserPurchaseController::class, 'destroy'])->name('purchase.destroy');
 

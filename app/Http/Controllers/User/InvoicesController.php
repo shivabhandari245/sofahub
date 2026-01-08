@@ -13,7 +13,7 @@ use Yajra\DataTables\Facades\DataTables;
 
 class InvoicesController extends Controller
 {
-    // Dashboard view
+    
     public function index(Request $request)
     {
         $months = $request->months ?? 3;
@@ -62,10 +62,10 @@ class InvoicesController extends Controller
                 '<a href="'.route('user.invoices.show', $sale->id).'" class="btn btn-info btn-sm"><i class="fas fa-eye"></i></a>
                  <a href="'.route('user.invoices.print', $sale->id).'" target="_blank" class="btn btn-secondary btn-sm"><i class="fas fa-print"></i></a>'
             )
-            ->editColumn('subtotal', fn($sale) => number_format($sale->subtotal, 2))
-            ->editColumn('discount', fn($sale) => number_format($sale->discount, 2))
-            ->editColumn('tax_amount', fn($sale) => number_format($sale->tax_amount, 2))
-            ->editColumn('total_amount', fn($sale) => number_format($sale->total_amount, 2))
+            ->editColumn('subtotal', fn($sale) => $sale->subtotal, 2)
+            ->editColumn('discount', fn($sale) => $sale->discount, 2)
+            ->editColumn('tax_amount', fn($sale) =>$sale->tax_amount, 2)
+            ->editColumn('total_amount', fn($sale) =>$sale->total_amount, 2)
             ->editColumn('profit', fn($sale) => '<span class="'.($sale->profit >= 0 ? 'text-success' : 'text-danger').'">'.number_format($sale->profit, 2).'</span>')
             ->rawColumns(['status','actions','profit'])
             ->make(true);
