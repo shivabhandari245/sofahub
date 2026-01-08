@@ -16,13 +16,12 @@ use Yajra\DataTables\DataTables;
 class SaleController extends Controller
 {
 
-
 public function index(Request $request)
 {
     if ($request->ajax()) {
         $query = Sale::with(['user', 'customer'])
                      ->withCount('items')
-                     ->orderBy('date', 'desc');
+                     ->orderBy('created_at', 'desc');
 
         // Date filters
         if ($request->filled('date_from')) {
@@ -33,58 +32,33 @@ public function index(Request $request)
         }
 
         return DataTables::of($query)
-
-        ->editColumn('id', function($sale){
-    return str_pad($sale->id, 5, '0', STR_PAD_LEFT);
-})
-
+            // Global search for DataTables search box
             ->filter(function ($query) use ($request) {
                 if ($request->has('search') && !empty($request->search['value'])) {
                     $search = $request->search['value'];
-                    $query->where(function($q) use ($search) {
+                    $query->where(function ($q) use ($search) {
                         $q->where('id', 'like', "%{$search}%")
-                          ->orWhereHas('customer', fn($q2) => $q2->where('name', 'like', "%{$search}%"));
+                          ->orWhereHas('customer', function ($q2) use ($search) {
+                              $q2->where('name', 'like', "%{$search}%");
+                          });
                     });
                 }
             })
-
-
             ->addColumn('customer', fn($sale) => $sale->customer->name ?? 'Walk-in')
             ->addColumn('user', fn($sale) => $sale->user->name ?? 'N/A')
-            ->addColumn('items_count', fn($sale) => $sale->items_count)
-            
-            // Sale status badge
             ->addColumn('status', fn($sale) => $sale->returned 
-                ? '<span class="badge bg-danger" title="Sale returned">Returned</span>'
-                : '<span class="badge bg-success" title="Sale completed">Completed</span>')
-            
-            // Payment status badge with tooltip
-            ->addColumn('payment_status', function($sale) {
-                $method = $sale->payment_method ? " (Method: {$sale->payment_method})" : '';
-                switch ($sale->payment_status) {
-                    case 'paid':
-                        return '<span class="badge bg-success" title="Paid'.$method.'">Paid</span>';
-                    case 'partially_paid':
-                        return '<span class="badge bg-warning" title="Partially Paid'.$method.'">Partial</span>';
-                    default:
-                        return '<span class="badge bg-secondary" title="Unpaid">Unpaid</span>';
-                }
-            })
-
-            // Numeric columns
+                ? '<span class="badge bg-danger">Returned</span>'
+                : '<span class="badge bg-success">Completed</span>')
+            ->editColumn('date', fn($sale) => $sale->date->format('d M Y h:i A'))
             ->editColumn('subtotal', fn($sale) => number_format($sale->subtotal, 2))
             ->editColumn('discount', fn($sale) => number_format($sale->discount, 2))
             ->editColumn('afterdiscount', fn($sale) => number_format($sale->afterdiscount, 2))
             ->editColumn('tax_amount', fn($sale) => number_format($sale->tax_amount, 2))
             ->editColumn('total_amount', fn($sale) => number_format($sale->total_amount, 2))
             ->editColumn('profit', fn($sale) => number_format($sale->profit, 2))
-            
-            ->editColumn('date', fn($sale) => $sale->date->format('d M Y h:i A'))
-
-            // Actions
+            ->editColumn('profitafterdiscount', fn($sale) => number_format($sale->profitafterdiscount ?? $sale->profit, 2))
             ->addColumn('actions', fn($sale) => view('user.sales.action', compact('sale'))->render())
-
-            ->rawColumns(['status', 'payment_status', 'actions'])
+            ->rawColumns(['status','actions'])
             ->make(true);
     }
 
@@ -104,6 +78,7 @@ public function index(Request $request)
         return view('user.sales.create', compact('products', 'categories'));
     }
 
+
 public function ajaxList(Request $request)
 {
     $query = ProductModel::where('quantity', '>', 0);
@@ -112,29 +87,18 @@ public function ajaxList(Request $request)
         $query->where('category', trim($request->category_id));
     }
 
-    if ($request->filled('search')) {
-        $search = $request->search;
-        $query->where(function ($q) use ($search) {
-            $q->where('name', 'like', "%{$search}%")
-              ->orWhere('category', 'like', "%{$search}%");
-        });
-    }
-
-    $products = $query->orderBy('name')->paginate(10);
-
-    return response()->json([
-        'data' => $products->map(fn($product) => [
-            'id' => $product->id,
-            'name' => $product->name,
-            'quantity' => $product->quantity,
-            'cost_per_product' => $product->cost_per_product,
-            'category' => $product->category,
-            'quality' => $product->quality,
-        ]),
-        'current_page' => $products->currentPage(),
-        'last_page' => $products->lastPage(),
-        'total' => $products->total(),
-    ]);
+    return DataTables::of($query)
+        ->filter(function ($q) use ($request) {
+            $search = $request->input('search.value');
+            if (!empty($search)) {
+                $q->where(function ($qq) use ($search) {
+                    $qq->where('name', 'like', "%{$search}%")
+                       ->orWhere('category', 'like', "%{$search}%");
+                });
+            }
+        })
+        ->editColumn('cost_per_product', fn($p) => number_format($p->cost_per_product, 2))
+        ->make(true);
 }
 
 
@@ -142,16 +106,15 @@ public function getCustomers(Request $request)
 {
     $query = \App\Models\Customer::query();
 
-    if ($request->filled('search')) {
-        $search = $request->search;
+    if ($request->filled('q')) {
+        $search = $request->q;
         $query->where('name', 'like', "%{$search}%")
               ->orWhere('phone', 'like', "%{$search}%");
     }
 
-    $customers = $query->limit(10)->get();
-
-    return response()->json($customers);
+    return response()->json($query->limit(6)->get());
 }
+
 
 public function store(Request $request)
 {
@@ -196,7 +159,7 @@ public function store(Request $request)
             'discount'        => $discount,
             'total_amount'    => 0,
             'profit'          => 0,
-            'user_id'         => auth::id(),
+            'user_id'         => Auth::id(),
             'status'          => 'completed',
 
             // 💳 Payment fields

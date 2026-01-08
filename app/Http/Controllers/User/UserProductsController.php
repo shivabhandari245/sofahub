@@ -44,6 +44,7 @@ class UserProductsController extends Controller
                     $products->where('source', 'like', '%purchase%');
                 }
             }
+//ProductModel::where('user_id', Auth::id())->where('quantity', 0)->delete();
 
             return DataTables::of($products)
                 ->addColumn('showroom', fn () => Auth::user()->name)

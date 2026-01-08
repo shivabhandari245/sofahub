@@ -121,7 +121,7 @@ class UserPurchaseController extends Controller
         ]);
     }
 
-    // Route model binding automatically fetches the purchase and ensures existence
+    
     public function edit(PurchaseModel $purchase)
     {
         $this->authorizePurchase($purchase);

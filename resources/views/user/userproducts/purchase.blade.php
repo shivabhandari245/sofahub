@@ -279,25 +279,44 @@ $(document).ready(function(){
         .fail(()=>Swal.fire('Error','Operation failed','error'));
     });
 
-    // Edit
-    $('#purchasesTable').on('click','.edit-btn', function(){
-        let id = $(this).data('id');
-        $.get(`/user/purchase/${id}/edit`, function(data){
-            $('#purchaseId').val(data.id);
-            $('#formTitle').text('Edit Purchase');
-            $('#purchaseSubmitBtn').text('Update Purchase');
-            $('#productName').val(data.product_name);
+   $('#purchasesTable').on('click','.edit-btn', function(){
+    let id = $(this).data('id');
+    $.get(`/user/purchases/${id}/edit`, function(data){
+
+        $('#purchaseId').val(data.id);
+        $('#formTitle').text('Edit Purchase');
+        $('#purchaseSubmitBtn').text('Update Purchase');
+
+        $('#productName').val(data.product_name);
+
+        // Handle category
+        if(!$('#productCategory option[value="'+data.category+'"]').length){
+            $('#productCategory').append(`<option value="${data.category}" selected>${data.category}</option>`);
+        } else {
             $('#productCategory').val(data.category);
+        }
+
+        // Handle supplier
+        if(!$('#supplierName option[value="'+data.supplier_name+'"]').length){
+            $('#supplierName').append(`<option value="${data.supplier_name}" selected>${data.supplier_name}</option>`);
+        } else {
             $('#supplierName').val(data.supplier_name);
-            $('#supplierContact').val(data.supplier_contact);
-            $('#purchaseQuantity').val(data.quantity);
-            $('#unitCost').val(data.unit_cost);
-            $('#productQuality').val(data.quality);
-            $('#deliveryDate').val(data.delivery_date);
-            updateSummary();
-            $('#purchaseFormCard').slideDown();
-        });
+        }
+
+        $('#supplierContact').val(data.supplier_contact);
+        $('#purchaseQuantity').val(data.quantity);
+        $('#unitCost').val(data.unit_cost);
+        $('#productQuality').val(data.quality);
+        $('#deliveryDate').val(data.delivery_date);
+
+        updateSummary();
+        $('#purchaseFormCard').slideDown();
+    }).fail(function(err){
+        Swal.fire('Error','Failed to fetch purchase data','error');
+        console.log(err);
     });
+});
+
 
     // Delete
     $('#purchasesTable').on('click','.delete-btn', function(){

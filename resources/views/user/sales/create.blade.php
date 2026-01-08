@@ -1,5 +1,10 @@
 @extends('layouts.user')
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+
 @section('content')
 <div class="container-fluid">
     <div class="row">
@@ -21,14 +26,7 @@
                             </select>
 
                         </div>
-                        <div class="col-md-6">
-                            <label for="productSearch" class="form-label fw-semibold">
-                                <i class="fas fa-search me-1"></i>Search Products
-                            </label>
-                            <input type="text" id="productSearch" class="form-control"
-                                placeholder="Search by product name, code or category...">
-                        </div>
-                        <div class="col-md-3">
+                            <div class="col-md-3">
                             <button class="btn btn-primary w-100" id="refreshProductsBtn">
                                 <i class="fas fa-sync-alt me-2"></i> Refresh Products
                             </button>
@@ -45,44 +43,24 @@
                     </h5>
                     <span class="badge bg-primary" id="productCount">0 products</span>
                 </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0" id="productTable">
-                            <thead class="table-light">
-                                <tr>
-                                    <th width="40%">Product Name</th>
-                                    <th>Category</th>
-                                    <th>Quality</th>
-                                    <th width="15%">Cost Price</th>
-                                    <th width="15%">Stock</th>
-                                    <th width="15%">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="productTableBody">
+               <div class="card-body p-0">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0" id="productTable">
+            <thead class="table-light">
+                <tr>
+                    <th width="40%">Product Name</th>
+                    <th>Category</th>
+                    <th>Quality</th>
+                    <th width="15%">Cost Price</th>
+                    <th width="15%">Stock</th>
+                    <th width="15%">Action</th>
+                </tr>
+            </thead>
+            <tbody></tbody> <!-- DataTables handles this -->
+        </table>
+    </div>
+</div>
 
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div id="productsLoading" class="text-center py-5">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p class="mt-2 text-muted">Loading products...</p>
-                    </div>
-
-                    <!-- Empty state -->
-                    <div id="productsEmpty" class="text-center py-5" style="display: none;">
-                        <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted">No products found</h5>
-                        <p class="text-muted">Try adjusting your search or filter</p>
-                    </div>
-
-                    <!-- Pagination -->
-                    <nav id="productPagination" class="my-3" style="display: none;">
-                        <ul class="pagination justify-content-center" id="paginationList"></ul>
-                    </nav>
-                </div>
             </div>
         </div>
         <!-- End Products Section -->
@@ -383,7 +361,7 @@
                             <label class="form-label">
                                 <i class="fas fa-phone me-1"></i> Phone *
                             </label>
-                            <input type="tel" class="form-control" id="modalCustomerPhone" name="phone">
+                            <input type="tel" class="form-control" id="modalCustomerPhone" name="phone" minlength="10" maxlength="10">
                             <small class="text-danger error-phone"></small>
                         </div>
 
@@ -609,8 +587,15 @@
 @endpush
 
 @push('scripts')
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+
 <script>
-let products = [];
+
 let cart = [];
 let currentProduct = null;
 
@@ -633,9 +618,81 @@ function showSuccess(message) {
     });
 }
 
-/* ===============================
-   SPLIT PAYMENT LOGIC
-================================ */
+
+let productTable;
+
+$(document).ready(function () {
+
+    productTable = $('#productTable').DataTable({
+        processing: true,
+        serverSide: true,
+        searching: true,
+        paging: true,
+        ordering: false,
+        lengthChange: false,
+
+        ajax: {
+            url: "{{ route('user.products.ajax') }}",
+            data: function (d) {
+                d.category_id = $('#category').val(); // existing filter
+            },
+            beforeSend: function () {
+                $('#productsLoading').show();
+                $('#productsEmpty').hide();
+            },
+            complete: function () {
+                $('#productsLoading').hide();
+            }
+        },
+
+        columns: [
+            { data: 'name' },
+            { data: 'category' },
+            { data: 'quality' },
+            { data: 'cost_per_product' },
+            { data: 'quantity' },
+            {
+                data: null,
+                orderable: false,
+                searchable: false,
+                render: function (data) {
+                    return `
+                        <button class="btn btn-sm btn-primary addProduct"
+                            data-product='${JSON.stringify(data)}'>
+                            Add
+                        </button>
+                    `;
+                }
+            }
+        ],
+
+        drawCallback: function (settings) {
+            const count = settings.json?.recordsTotal || 0;
+            $('#productCount').text(count + ' products');
+
+            if (count === 0) {
+                $('#productsEmpty').show();
+            }
+        }
+    });
+
+    // External search input (your existing input)
+    $('#productSearch').on('keyup', function () {
+        productTable.search(this.value).draw();
+    });
+
+    // Category filter
+    $('#category').on('change', function () {
+        productTable.ajax.reload();
+    });
+
+    // Refresh button
+    $('#refreshProductsBtn').on('click', function () {
+        productTable.ajax.reload();
+    });
+});
+
+
 //paymentcheck method 
 
 $('.payment-check').on('change', function () {
@@ -653,64 +710,6 @@ $('.payment-check').on('change', function () {
 
 
 
-/* ===============================
-   PRODUCT LOADING
-================================ */
-function loadProducts(page = 1) {
-    $('#productsLoading').show();
-    $('#productsEmpty').hide();
-
-    $.get("{{ route('user.products.ajax') }}", {
-        page: page,
-        search: $('#productSearch').val(),
-        category_id: $('#category').val()
-    }, function(res) {
-        $('#productsLoading').hide();
-        $('#productTableBody').empty();
-
-        if (res.data.length === 0) {
-            $('#productsEmpty').show();
-            $('#productCount').text('0 products');
-            return;
-        }
-
-        $('#productCount').text(res.total + ' products');
-
-        res.data.forEach(p => {
-            $('#productTableBody').append(`
-        <tr>
-            <td>${p.name}</td>
-          <td>${p.category}</td>
-<td>${p.quality}</td>
-
-            <td>${p.cost_per_product}</td>
-            <td>${p.quantity}</td>
-            <td>
-                <button class="btn btn-sm btn-primary addProduct"
-                    data-product='${JSON.stringify(p)}'>
-                    Add
-                </button>
-            </td>
-        </tr>
-    `);
-        });
-
-
-        renderPagination(res);
-    });
-}
-
-function renderPagination(res) {
-    let html = '';
-    for (let i = 1; i <= res.last_page; i++) {
-        html += `
-            <li class="page-item ${i === res.current_page ? 'active' : ''}">
-                <a class="page-link" href="#" data-page="${i}">${i}</a>
-            </li>`;
-    }
-    $('#paginationList').html(html);
-    $('#productPagination').show();
-}
 
 /* ===============================
    ADD PRODUCT MODAL
@@ -726,6 +725,7 @@ $(document).on('click', '.addProduct', function() {
     $('#profitPerUnit').text('0.00');
 
     $('#quantityModal').modal('show');
+
 });
 
 $('#unitPriceInput, #quantityInput').on('input', function() {
@@ -749,13 +749,12 @@ $('#confirmAdd').click(function () {
     let cartQty = existingIndex !== -1 ? cart[existingIndex].quantity : 0;
     let remainingStock = currentProduct.quantity - cartQty;
 
-    // 🚫 Stock check
     if (qty > remainingStock) {
         showError(`Not enough stock available. Remaining: ${remainingStock}`);
         return;
     }
 
-    // ⚠️ Product already exists → confirmation
+ 
     if (existingIndex !== -1) {
         Swal.fire({
             title: 'Product already in cart',
@@ -777,7 +776,7 @@ $('#confirmAdd').click(function () {
         });
 
     } else {
-        // ✅ New product
+     
         cart.push({
             product_id: currentProduct.id,
             name: currentProduct.name,
@@ -889,7 +888,7 @@ function calculateTotals() {
     
     // Prevent discount larger than subtotal
     if (discount > subtotal) discount = subtotal;
-    $('#discountAmount').text(discount.toFixed(2)); // ✅ update the display
+    $('#discountAmount').text(discount.toFixed(2)); 
 
     // Subtotal after discount
     let subtotalAfterDiscount = subtotal - discount;
@@ -1151,16 +1150,7 @@ $('#checkoutForm').on('submit', function (e) {
 
 
 
-/* ===============================
-   INIT
-================================ */
-$(document).ready(() => loadProducts());
-$('#refreshProductsBtn').click(() => loadProducts());
-$('#category, #productSearch').on('change keyup', () => loadProducts());
-$(document).on('click', '.page-link', function(e) {
-    e.preventDefault();
-    loadProducts($(this).data('page'));
-});
+
 </script>
 
 @endpush
