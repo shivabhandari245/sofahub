@@ -129,28 +129,29 @@ public function getCustomers(Request $request)
 
 public function store(Request $request)
 {
+    // 1️⃣ Validate the request
     $validated = $request->validate([
-        'customer_id'     => 'required|exists:customers,id',
-        'cartItems'       => 'required|json',
-        'tax_rate'        => 'nullable|numeric|min:0|max:100',
-        'discount'        => 'nullable|numeric|min:0',
-        'payment_method'  => 'nullable|string',
-        'payment_remarks' => 'nullable|string',
-        'payment_status'  => 'required|in:paid,unpaid,partially_paid',
+        'customer_id'      => 'required|exists:customers,id',
+        'cartItems'        => 'required|json',
+        'tax_rate'         => 'nullable|numeric|min:0|max:100',
+        'discount'         => 'nullable|numeric|min:0',
+        'payment_method'   => 'nullable|',           // Array of methods    
+        'payment_remarks'  => 'nullable|string|max:500',
+        'payment_status'   => 'required|in:paid,unpaid,partially_paid',
     ]);
 
-    $paymentMethod   = $validated['payment_method'] ?? null;
-    $paymentRemarks  = $validated['payment_remarks'] ?? null;
-    $paymentStatus   = $validated['payment_status'];
+    $paymentMethod  = $validated['payment_method'] ?? []; // Already array
+    $paymentRemarks = $validated['payment_remarks'] ?? null;
+    $paymentStatus  = $validated['payment_status'];
 
-    // Business rule enforcement
+    // 2️⃣ Business rules for payments
     if ($paymentStatus === 'unpaid') {
-        $paymentMethod  = null;
+        $paymentMethod  = [];
         $paymentRemarks = null;
     }
 
     if ($paymentStatus === 'paid' && empty($paymentMethod)) {
-        throw new \Exception('Payment method is required for paid sales.');
+        return back()->withErrors(['payment_method' => 'Payment method is required for paid sales.']);
     }
 
     $cartItems  = json_decode($validated['cartItems'], true);
@@ -161,27 +162,30 @@ public function store(Request $request)
     DB::beginTransaction();
 
     try {
-
+        // 3️⃣ Create the sale first
         $sale = Sale::create([
             'customer_id'     => $customerId,
             'subtotal'        => 0,
+            'afterdiscount'   => 0,
             'tax_rate'        => $taxRate,
             'tax_amount'      => 0,
             'discount'        => $discount,
             'total_amount'    => 0,
             'profit'          => 0,
-            'user_id'         => auth::id(),
+            'profitafterdiscount' => 0,
+            'user_id'         => auth()->id(),
             'status'          => 'completed',
 
-            // 💳 Payment fields
+            // Payment info
             'payment_status'  => $paymentStatus,
-            'payment_method'  => $paymentMethod,
+            'payment_method'  => $paymentMethod,   // store array directly
             'payment_remarks' => $paymentRemarks,
         ]);
 
-        $subtotal     = 0;
-        $totalProfit  = 0;
+        $subtotal    = 0;
+        $totalProfit = 0;
 
+        // 4️⃣ Process cart items
         foreach ($cartItems as $item) {
             $product = ProductModel::findOrFail($item['product_id']);
 
@@ -208,22 +212,21 @@ public function store(Request $request)
             $totalProfit += $itemProfit;
         }
 
-      $afterDiscount = max(0, $subtotal - $discount); 
- $taxAmount = round($afterDiscount * ($taxRate / 100), 2);
- $totalAmount = round($afterDiscount + $taxAmount, 2);
-$profitAfterDiscount = max(0, $totalProfit - $discount);
+        // 5️⃣ Calculate totals
+        $afterDiscount       = max(0, $subtotal - $discount);
+        $taxAmount           = round($afterDiscount * ($taxRate / 100), 2);
+        $totalAmount         = round($afterDiscount + $taxAmount, 2);
+        $profitAfterDiscount = max(0, $totalProfit - $discount);
 
-$sale->update([
-    'subtotal'          => $subtotal,
-    'afterdiscount'     => $afterDiscount,
-    'tax_rate'          => $taxRate,
-    'tax_amount'        => $taxAmount,
-    'total_amount'      => $totalAmount,
-    'profit'            => $totalProfit,
-    'profitafterdiscount'=> $profitAfterDiscount,
-]);
-
-       
+        // 6️⃣ Update sale totals
+        $sale->update([
+            'subtotal'           => $subtotal,
+            'afterdiscount'      => $afterDiscount,
+            'tax_amount'         => $taxAmount,
+            'total_amount'       => $totalAmount,
+            'profit'             => $totalProfit,
+            'profitafterdiscount'=> $profitAfterDiscount,
+        ]);
 
         DB::commit();
 
@@ -240,6 +243,7 @@ $sale->update([
         ], 400);
     }
 }
+
 
 
 

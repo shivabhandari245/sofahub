@@ -143,8 +143,9 @@
                         </tr>
                         <tr>
                             <th>Payment Method:</th>
-                            <td class="text-end">{{ ucfirst($sale->payment_method ?? 'N/A') }}</td>
-                        </tr>
+                        <td class="text-end">
+                            {{ !empty($sale->payment_method) ? ucfirst(implode(', ', $sale->payment_method)) : 'N/A' }}
+                        </td>                        </tr>
                         @if($sale->payment_remarks)
                         <tr>
                             <th>Remarks:</th>
@@ -177,14 +178,51 @@
                         <option value="paid" {{ $sale->payment_status == 'paid' ? 'selected' : '' }}>Paid</option>
                         <option value="partial" {{ $sale->payment_status == 'partial' ? 'selected' : '' }}>Partial</option>
                         <option value="unpaid" {{ $sale->payment_status == 'unpaid' ? 'selected' : '' }}>Unpaid</option>
-                    </select>
-                </div>
+                                </select>
+                            </div>
 
-                <div class="form-group">
-                    <label>Payment Method</label>
-                    <input type="text" name="payment_method" class="form-control"
-                           value="{{ $sale->payment_method }}">
-                </div>
+                    <div class="form-group">
+                        <label class="mb-2">Payment Method</label>
+
+                        <div class="row align-items-center">
+                            <div class="col-4">
+                                <div class="form-check">
+                                    <input class="form-check-input payment-check"
+                                        type="checkbox"
+                                        name="payment_method[]"     
+                                        value="cash"
+                                        id="payCash"
+                                        {{ in_array('cash', $sale->payment_method ?? []) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="payCash">💵 Cash</label>
+                                </div>
+                            </div>
+
+                            <div class="col-4">
+                                <div class="form-check">
+                                    <input class="form-check-input payment-check"
+                                        type="checkbox"
+                                        name="payment_method[]"
+                                        value="qr"
+                                        id="payQR"
+                                        {{ in_array('qr', $sale->payment_method ?? []) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="payQR">📱 QR</label>
+                                </div>
+                            </div>
+
+                            <div class="col-4">
+                                <div class="form-check">
+                                    <input class="form-check-input payment-check"
+                                        type="checkbox"
+                                        name="payment_method[]"
+                                        value="cheque"
+                                        id="payCheque"
+                                        {{ in_array('cheque', $sale->payment_method ?? []) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="payCheque">🧾 Cheque</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
 
                 <div class="form-group">
                     <label>Remarks</label>
@@ -206,6 +244,8 @@
  function closeModal() {
     document.getElementById('paymentStatusModal').style.display = 'none';
  }
+
+ 
 </script>
 
 <style>
