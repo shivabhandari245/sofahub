@@ -50,12 +50,12 @@ public function index(Request $request)
                 ? '<span class="badge bg-danger">Returned</span>'
                 : '<span class="badge bg-success">Completed</span>')
             ->editColumn('date', fn($sale) => $sale->date->format('d M Y h:i A'))
-            ->editColumn('subtotal', fn($sale) => number_format($sale->subtotal, 2))
-            ->editColumn('discount', fn($sale) => number_format($sale->discount, 2))
-            ->editColumn('afterdiscount', fn($sale) => number_format($sale->afterdiscount, 2))
-            ->editColumn('tax_amount', fn($sale) => number_format($sale->tax_amount, 2))
-            ->editColumn('total_amount', fn($sale) => number_format($sale->total_amount, 2))
-            ->editColumn('profit', fn($sale) => number_format($sale->profit, 2))
+            ->editColumn('subtotal', fn($sale)=>$sale->subtotal, 2)
+            ->editColumn('discount', fn($sale) => $sale->discount, 2)
+            ->editColumn('afterdiscount', fn($sale) => $sale->afterdiscount, 2)
+            ->editColumn('tax_amount', fn($sale) =>$sale->tax_amount, 2)
+            ->editColumn('total_amount', fn($sale) =>$sale->total_amount, 2)
+         ->editColumn('profit', fn($sale) => $sale->profit)
             ->editColumn('profitafterdiscount', fn($sale) => number_format($sale->profitafterdiscount ?? $sale->profit, 2))
             ->addColumn('actions', fn($sale) => view('user.sales.action', compact('sale'))->render())
             ->rawColumns(['status','actions'])
@@ -78,7 +78,6 @@ public function index(Request $request)
         return view('user.sales.create', compact('products', 'categories'));
     }
 
-
 public function ajaxList(Request $request)
 {
     $query = ProductModel::where('quantity', '>', 0);
@@ -87,18 +86,29 @@ public function ajaxList(Request $request)
         $query->where('category', trim($request->category_id));
     }
 
-    return DataTables::of($query)
-        ->filter(function ($q) use ($request) {
-            $search = $request->input('search.value');
-            if (!empty($search)) {
-                $q->where(function ($qq) use ($search) {
-                    $qq->where('name', 'like', "%{$search}%")
-                       ->orWhere('category', 'like', "%{$search}%");
-                });
-            }
-        })
-        ->editColumn('cost_per_product', fn($p) => number_format($p->cost_per_product, 2))
-        ->make(true);
+    if ($request->filled('search')) {
+        $search = $request->search;
+        $query->where(function ($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhere('category', 'like', "%{$search}%");
+        });
+    }
+
+    $products = $query->orderBy('name')->paginate(10);
+
+    return response()->json([
+        'data' => $products->map(fn($product) => [
+            'id' => $product->id,
+            'name' => $product->name,
+            'quantity' => $product->quantity,
+            'cost_per_product' => $product->cost_per_product,
+            'category' => $product->category,
+            'quality' => $product->quality,
+        ]),
+        'current_page' => $products->currentPage(),
+        'last_page' => $products->lastPage(),
+        'total' => $products->total(),
+    ]);
 }
 
 
@@ -106,15 +116,16 @@ public function getCustomers(Request $request)
 {
     $query = \App\Models\Customer::query();
 
-    if ($request->filled('q')) {
-        $search = $request->q;
+    if ($request->filled('search')) {
+        $search = $request->search;
         $query->where('name', 'like', "%{$search}%")
               ->orWhere('phone', 'like', "%{$search}%");
     }
 
-    return response()->json($query->limit(6)->get());
-}
+    $customers = $query->limit(10)->get();
 
+    return response()->json($customers);
+}
 
 public function store(Request $request)
 {
@@ -159,7 +170,7 @@ public function store(Request $request)
             'discount'        => $discount,
             'total_amount'    => 0,
             'profit'          => 0,
-            'user_id'         => Auth::id(),
+            'user_id'         => auth::id(),
             'status'          => 'completed',
 
             // 💳 Payment fields
