@@ -56,6 +56,8 @@ Route::get('products/ajax', [SaleController::class, 'ajaxList'])->name('user.pro
 
  Route::get('/saleitems', [SaleItemController::class, 'index'])->name('saleitems.index');
 Route::post('/saleitems/return/{id}', [SaleItemController::class, 'returnItem'])->name('saleitems.return');
+Route::get('user/saleitems/list', [SaleItemController::class, 'getSaleItems'])
+    ->name('user.saleitems.list');
 
 
 Route::get('/customers/search', [UserCustomerController::class, 'search'])->name('user.customers.search');

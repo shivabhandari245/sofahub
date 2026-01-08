@@ -16,12 +16,13 @@ use Yajra\DataTables\DataTables;
 class SaleController extends Controller
 {
 
+
 public function index(Request $request)
 {
     if ($request->ajax()) {
         $query = Sale::with(['user', 'customer'])
                      ->withCount('items')
-                     ->orderBy('created_at', 'desc');
+                     ->orderBy('date', 'desc');
 
         // Date filters
         if ($request->filled('date_from')) {
@@ -32,33 +33,58 @@ public function index(Request $request)
         }
 
         return DataTables::of($query)
-            // Global search for DataTables search box
+
+        ->editColumn('id', function($sale){
+    return str_pad($sale->id, 5, '0', STR_PAD_LEFT);
+})
+
             ->filter(function ($query) use ($request) {
                 if ($request->has('search') && !empty($request->search['value'])) {
                     $search = $request->search['value'];
-                    $query->where(function ($q) use ($search) {
+                    $query->where(function($q) use ($search) {
                         $q->where('id', 'like', "%{$search}%")
-                          ->orWhereHas('customer', function ($q2) use ($search) {
-                              $q2->where('name', 'like', "%{$search}%");
-                          });
+                          ->orWhereHas('customer', fn($q2) => $q2->where('name', 'like', "%{$search}%"));
                     });
                 }
             })
+
+
             ->addColumn('customer', fn($sale) => $sale->customer->name ?? 'Walk-in')
             ->addColumn('user', fn($sale) => $sale->user->name ?? 'N/A')
+            ->addColumn('items_count', fn($sale) => $sale->items_count)
+            
+            // Sale status badge
             ->addColumn('status', fn($sale) => $sale->returned 
-                ? '<span class="badge bg-danger">Returned</span>'
-                : '<span class="badge bg-success">Completed</span>')
-            ->editColumn('date', fn($sale) => $sale->date->format('d M Y h:i A'))
+                ? '<span class="badge bg-danger" title="Sale returned">Returned</span>'
+                : '<span class="badge bg-success" title="Sale completed">Completed</span>')
+            
+            // Payment status badge with tooltip
+            ->addColumn('payment_status', function($sale) {
+                $method = $sale->payment_method ? " (Method: {$sale->payment_method})" : '';
+                switch ($sale->payment_status) {
+                    case 'paid':
+                        return '<span class="badge bg-success" title="Paid'.$method.'">Paid</span>';
+                    case 'partially_paid':
+                        return '<span class="badge bg-warning" title="Partially Paid'.$method.'">Partial</span>';
+                    default:
+                        return '<span class="badge bg-secondary" title="Unpaid">Unpaid</span>';
+                }
+            })
+
+            // Numeric columns
             ->editColumn('subtotal', fn($sale) => number_format($sale->subtotal, 2))
             ->editColumn('discount', fn($sale) => number_format($sale->discount, 2))
             ->editColumn('afterdiscount', fn($sale) => number_format($sale->afterdiscount, 2))
             ->editColumn('tax_amount', fn($sale) => number_format($sale->tax_amount, 2))
             ->editColumn('total_amount', fn($sale) => number_format($sale->total_amount, 2))
             ->editColumn('profit', fn($sale) => number_format($sale->profit, 2))
-            ->editColumn('profitafterdiscount', fn($sale) => number_format($sale->profitafterdiscount ?? $sale->profit, 2))
+            
+            ->editColumn('date', fn($sale) => $sale->date->format('d M Y h:i A'))
+
+            // Actions
             ->addColumn('actions', fn($sale) => view('user.sales.action', compact('sale'))->render())
-            ->rawColumns(['status','actions'])
+
+            ->rawColumns(['status', 'payment_status', 'actions'])
             ->make(true);
     }
 

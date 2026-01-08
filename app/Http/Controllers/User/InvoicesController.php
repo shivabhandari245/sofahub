@@ -14,62 +14,94 @@ use Yajra\DataTables\Facades\DataTables;
 class InvoicesController extends Controller
 {
     // Dashboard view
-    public function index(Request $request)
-    {
-        $months = $request->months ?? 3;
-        $user = Auth::user();
+   public function index(Request $request)
+{
+    $months = $request->months ?? 3;
+    $user = Auth::user();
 
-        $invoices = Sale::where('user_id', $user->id)
-            ->where('date', '>=', Carbon::now()->subMonths($months))
-            ->get();
+    $fromDate = Carbon::now()->subMonths($months);
 
-        return view('user.invoices.index', [
-            'months'         => $months,
-            'totalInvoices'  => $invoices->count(),
-            'totalRevenue'   => $invoices->sum('total_amount'),
-            'totalTax'       => $invoices->sum('tax_amount'),
-            'totalDiscount'  => $invoices->sum('discount'),
-        ]);
-    }
+    $salesQuery = Sale::where('user_id', $user->id)
+        ->where('created_at', '>=', $fromDate);
 
-    // Server-side DataTables
-    public function datatables(Request $request)
-    {
-        $user = Auth::user();
-        $months = $request->months ?? 3;
-        $startDate = Carbon::now()->subMonths($months);
+    $totalInvoices = (clone $salesQuery)->count();
+    $totalRevenue  = (clone $salesQuery)->sum('total_amount');
+    $totalTax      = (clone $salesQuery)->sum('tax_amount');
+    $totalDiscount = (clone $salesQuery)->sum('discount');
 
-        // Eager load customer, cashier (user), and items
-        $invoices = Sale::with('customer', 'user', 'items')
-            ->where('user_id', $user->id)
-            ->where('date', '>=', $startDate)
-            ->orderByDesc('date');
+    $totalPaid = (clone $salesQuery)
+        ->where('payment_status', 'paid')
+        ->sum('total_amount');
 
-        return DataTables::of($invoices)
-            ->addColumn('customer', fn($sale) => $sale->customer->name ?? 'Walk-in')
-            ->addColumn('cashier', fn($sale) => $sale->user->name ?? 'N/A')
-            ->addColumn('items', function($sale){
-              
-                return $sale->items->map(fn($item) => $item->quantity.$item->product_name)->join(', ');
-            })
-            ->addColumn('afterdiscount', fn($sale) => number_format($sale->subtotal - $sale->discount, 2))
-            ->addColumn('status', fn($sale) =>
-                $sale->returned 
-                    ? '<span class="badge bg-danger">Returned</span>'
-                    : '<span class="badge bg-success">Completed</span>'
-            )
-            ->addColumn('actions', fn($sale) =>
-                '<a href="'.route('user.invoices.show', $sale->id).'" class="btn btn-info btn-sm"><i class="fas fa-eye"></i></a>
-                 <a href="'.route('user.invoices.print', $sale->id).'" target="_blank" class="btn btn-secondary btn-sm"><i class="fas fa-print"></i></a>'
-            )
-            ->editColumn('subtotal', fn($sale) => number_format($sale->subtotal, 2))
-            ->editColumn('discount', fn($sale) => number_format($sale->discount, 2))
-            ->editColumn('tax_amount', fn($sale) => number_format($sale->tax_amount, 2))
-            ->editColumn('total_amount', fn($sale) => number_format($sale->total_amount, 2))
-            ->editColumn('profit', fn($sale) => '<span class="'.($sale->profit >= 0 ? 'text-success' : 'text-danger').'">'.number_format($sale->profit, 2).'</span>')
-            ->rawColumns(['status','actions','profit'])
-            ->make(true);
-    }
+    $totalUnpaid = (clone $salesQuery)
+        ->where('payment_status', 'unpaid')
+        ->sum('total_amount');
+
+    $totalPartial = (clone $salesQuery)
+        ->where('payment_status', 'partially_paid')
+        ->sum('total_amount');
+
+    return view('user.invoices.index', compact(
+        'months',
+        'totalInvoices',
+        'totalRevenue',
+        'totalTax',
+        'totalDiscount',
+        'totalPaid',
+        'totalUnpaid',
+        'totalPartial'
+    ));
+}
+
+   
+public function datatables(Request $request)
+{
+    $user = Auth::user();
+    $months = $request->months ?? 3; // default last 3 months
+    $startDate = Carbon::now()->subMonths($months)->startOfDay();
+
+    // Base query: only needed records
+    $query = Sale::with('customer', 'user', 'items')
+        ->where('user_id', $user->id)
+        ->where('date', '>=', $startDate)
+        ->orderByDesc('date');
+
+    return DataTables::of($query)
+        // Apply search filter
+        ->filter(function ($query) use ($request) {
+            if ($search = $request->search['value'] ?? null) {
+                $query->where(function($q) use ($search) {
+                    $q->where('id', 'like', "%{$search}%")
+                      ->orWhere('payment_method', 'like', "%{$search}%")
+                      ->orWhereHas('customer', fn($q2) => $q2->where('name', 'like', "%{$search}%"))
+                      ->orWhereHas('user', fn($q3) => $q3->where('name', 'like', "%{$search}%"));
+                });
+            }
+
+            // Additional filters (e.g., month filter) if needed in the future
+            if ($months = $request->months ?? null) {
+                $startDate = Carbon::now()->subMonths($months)->startOfDay();
+                $query->where('date', '>=', $startDate);
+            }
+        })
+        ->editColumn('id', fn($sale) => str_pad($sale->id, 6, '0', STR_PAD_LEFT))
+        ->addColumn('customer', fn($sale) => $sale->customer->name ?? 'Walk-in')
+        ->addColumn('cashier', fn($sale) => $sale->user->name ?? 'N/A')
+        ->addColumn('items', fn($sale) => $sale->items->map(fn($item) => $item->quantity.'×'.$item->product_name)->join(', '))
+        ->editColumn('discount', fn($sale) => number_format($sale->discount, 2))
+        ->editColumn('tax_amount', fn($sale) => number_format($sale->tax_amount, 2))
+        ->editColumn('total_amount', fn($sale) => number_format($sale->total_amount, 2))
+        ->addColumn('profitafterdiscount', fn($sale) => number_format($sale->profit, 2))
+        ->addColumn('payment_status', fn($sale) => ucfirst($sale->payment_status))
+        ->addColumn('actions', fn($sale) =>
+            '<a href="'.route('user.invoices.show', $sale->id).'" class="btn btn-info btn-sm"><i class="fas fa-eye"></i></a>
+             <a href="'.route('user.invoices.print', $sale->id).'" target="_blank" class="btn btn-secondary btn-sm"><i class="fas fa-print"></i></a>'
+        )
+        ->rawColumns(['actions'])
+        ->make(true);
+}
+
+
 
     public function show($id)
 {
