@@ -3,6 +3,93 @@
 
 @push('styles')
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
+<style>
+    /* Backdrop */
+    .bs-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, .5);
+        display: none;
+        z-index: 1055;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    /* Dialog */
+    .bs-modal-dialog {
+        max-width: 500px;
+        margin: 1.75rem auto;
+        pointer-events: none;
+    }
+
+    /* Content */
+    .bs-modal-content {
+        background-color: #fff;
+        border-radius: .5rem;
+        pointer-events: auto;
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+        animation: bsFade .2s ease-out;
+    }
+
+    /* Header */
+    .bs-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .bs-modal-title {
+        margin: 0;
+        font-size: 1.25rem;
+    }
+
+    /* Close button */
+    .bs-btn-close {
+        background: none;
+        border: 0;
+        font-size: 1.5rem;
+        cursor: pointer;
+        opacity: .5;
+    }
+    .bs-btn-close:hover { opacity: .75; }
+
+    /* Body */
+    .bs-modal-body {
+        padding: 1rem;
+    }
+
+    .bs-form-control {
+        width: 100%;
+        padding: .375rem .75rem;
+        border: 1px solid #ced4da;
+        border-radius: .375rem;
+    }
+    .bs-form-control:focus {
+        outline: none;
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 .2rem rgba(13,110,253,.25);
+    }
+
+    /* Footer */
+    .bs-modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: .5rem;
+        padding: .75rem;
+        border-top: 1px solid #dee2e6;
+    }
+
+    /* Animation */
+    @keyframes bsFade {
+        from { transform: translateY(-20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+</style>
+
+
+
 @endpush
 
 @section('content')
@@ -79,28 +166,34 @@
     </div>
 </div>
 
-<!-- Return Modal -->
-<div class="modal fade" id="returnModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" id="returnForm" class="modal-content">
-            @csrf
-            <div class="modal-header">
-                <h5 class="modal-title">Return Product</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- Bootstrap-like Custom Modal -->
+<div id="returnModal" class="bs-modal">
+    <div class="bs-modal-dialog">
+        <div class="bs-modal-content">
+
+            <div class="bs-modal-header">
+                <h5 class="bs-modal-title">Return Product</h5>
+                <button type="button" id="closeReturnModal" class="bs-btn-close">&times;</button>
             </div>
 
-            <div class="modal-body">
-                <label class="form-label">Return Reason</label>
-                <textarea name="return_reason" class="form-control" rows="3" required></textarea>
-            </div>
+            <form method="POST" id="returnForm">
+                @csrf
+                <div class="bs-modal-body">
+                    <label class="form-label">Return Reason</label>
+                    <textarea name="return_reason" class="bs-form-control" rows="3" required></textarea>
+                </div>
 
-            <div class="modal-footer">
-                <button type="submit" id="returnSubmitBtn" class="btn btn-danger btn-sm">Confirm</button>
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-            </div>
-        </form>
+                <div class="bs-modal-footer">
+                    <button type="submit" id="returnSubmitBtn" class="btn btn-danger btn-sm">Confirm</button>
+                    <button type="button" id="cancelReturnModal" class="btn btn-secondary btn-sm">Cancel</button>
+                </div>
+            </form>
+
+        </div>
     </div>
 </div>
+
+
 @endsection
 
 @push('scripts')
@@ -110,7 +203,7 @@
 <script>
 $(document).ready(function() {
 
-    // Initialize DataTable
+    /* ================= DATATABLE ================= */
     const table = $('#saleItemsTable').DataTable({
         paging: true,
         searching: true,
@@ -118,33 +211,56 @@ $(document).ready(function() {
         lengthChange: false,
         pageLength: 5,
         columnDefs: [
-            { orderable: false, targets: 9 } // Disable sorting on Actions
+            { orderable: false, targets: 9 }
         ]
     });
 
     // Status filter
     $('#filterStatus').on('change', function () {
-        table.column(8).search(this.value).draw(); // Status column index = 8
+        table.column(8).search(this.value).draw();
     });
 
-    /* ================= RETURN MODAL ================= */
-    const returnModal = new bootstrap.Modal(document.getElementById('returnModal'));
+    /* ================= CUSTOM RETURN MODAL ================= */
+    const modal = document.getElementById('returnModal');
     const returnForm = document.getElementById('returnForm');
     const returnSubmitBtn = document.getElementById('returnSubmitBtn');
+    const closeBtn = document.getElementById('closeReturnModal');
+    const cancelBtn = document.getElementById('cancelReturnModal');
 
+    function openModal() {
+        modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        modal.style.display = 'none';
+    }
+
+    // Open modal
     $('#saleItemsTable').on('click', '.return-btn', function() {
         const id = $(this).data('id');
         returnForm.action = `/user/saleitems/return/${id}`;
         returnForm.reset();
         returnSubmitBtn.disabled = false;
         returnSubmitBtn.innerText = 'Confirm';
-        returnModal.show();
+        openModal();
     });
 
+    // Close modal buttons
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+
+    // Close when clicking outside
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeModal();
+    });
+
+    // Submit handler
     returnForm.addEventListener('submit', function() {
         returnSubmitBtn.disabled = true;
         returnSubmitBtn.innerText = 'Processing...';
     });
+
 });
 </script>
+
 @endpush
