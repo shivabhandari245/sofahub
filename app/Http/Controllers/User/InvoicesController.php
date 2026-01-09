@@ -52,7 +52,7 @@ class InvoicesController extends Controller
               
                 return $sale->items->map(fn($item) => $item->quantity.$item->product_name)->join(', ');
             })
-            ->addColumn('afterdiscount', fn($sale) => number_format($sale->subtotal - $sale->discount, 2))
+            ->addColumn('afterdiscount', fn($sale) =>$sale->subtotal - $sale->discount)
             ->addColumn('status', fn($sale) =>
                 $sale->returned 
                     ? '<span class="badge bg-danger">Returned</span>'
@@ -62,10 +62,10 @@ class InvoicesController extends Controller
                 '<a href="'.route('user.invoices.show', $sale->id).'" class="btn btn-info btn-sm"><i class="fas fa-eye"></i></a>
                  <a href="'.route('user.invoices.print', $sale->id).'" target="_blank" class="btn btn-secondary btn-sm"><i class="fas fa-print"></i></a>'
             )
-            ->editColumn('subtotal', fn($sale) => $sale->subtotal, 2)
-            ->editColumn('discount', fn($sale) => $sale->discount, 2)
-            ->editColumn('tax_amount', fn($sale) =>$sale->tax_amount, 2)
-            ->editColumn('total_amount', fn($sale) =>$sale->total_amount, 2)
+            ->editColumn('subtotal', fn($sale) => $sale->subtotal)
+            ->editColumn('discount', fn($sale) => $sale->discount)
+            ->editColumn('tax_amount', fn($sale) =>$sale->tax_amount)
+            ->editColumn('total_amount', fn($sale) =>$sale->total_amount)
             ->editColumn('profit', fn($sale) => '<span class="'.($sale->profit >= 0 ? 'text-success' : 'text-danger').'">'.number_format($sale->profit, 2).'</span>')
             ->rawColumns(['status','actions','profit'])
             ->make(true);

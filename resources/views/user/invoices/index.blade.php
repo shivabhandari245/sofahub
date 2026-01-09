@@ -58,16 +58,12 @@
                         <th>Date</th>
                         <th>Customer</th>
                         <th>Cashier</th>
-                        <th>Items</th>
-                        <th>Subtotal</th>
                         <th>Discount</th>
-                        <th>After Discount</th>
                         <th>Tax</th>
                         <th>Total</th>
-                        <th>GrossProfit</th>
                         <th>ActualProfit</th>
-                        <th>Payment</th>
-                        <th>Status</th>
+                        <th>PaymentStatus</th>
+                       
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -123,23 +119,19 @@ $(document).ready(function(){
                 d.months = $('#monthsFilter').val(); // Send month filter
             }
         },
-        columns:[
-            {data:'id', name:'id'},
-            {data:'date', name:'date'},
-            {data:'customer', name:'customer'},
-            {data:'cashier', name:'cashier'},
-            {data:'items', name:'items', orderable:false, searchable:false},
-            {data:'subtotal', name:'subtotal'},
-            {data:'discount', name:'discount'},
-            {data:'afterdiscount', name:'afterdiscount', orderable:false},
-            {data:'tax_amount', name:'tax_amount'},
-            {data:'total_amount', name:'total_amount'},
-            {data:'profit', name:'profit', orderable:false, searchable:false},
-             {data:'profitafterdiscount', name:'profitafterdiscount', orderable:false, searchable:false},
-            {data:'payment_method', name:'payment_method'},
-            {data:'status', name:'status', orderable:false, searchable:false},
-            {data:'actions', name:'actions', orderable:false, searchable:false},
-        ],
+        columns: [
+    { data: 'id', name: 'id' },
+    { data: 'date', name: 'date' },
+    { data: 'customer', name: 'customer' },
+    { data: 'cashier', name: 'cashier' },
+    { data: 'discount', name: 'discount' },
+    { data: 'tax_amount', name: 'tax_amount' },
+    { data: 'total_amount', name: 'total_amount' },
+    { data: 'profit', name: 'profit' }, // ActualProfit
+    { data: 'payment_status' },
+    { data: 'actions', name: 'actions', orderable: false, searchable: false }
+],
+
         order: [[1,'desc']],
         responsive:true,
         dom:'Bfrtip',

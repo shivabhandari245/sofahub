@@ -42,22 +42,21 @@
             <div class="table-responsive">
                 <table id="salesTable" class="table table-hover table-bordered">
                     <thead class="table-light">
-                        <tr>
-                            <th>ID</th>
-                            <th>Date</th>
-                            <th>Customer</th>
-                            <th>Cashier</th>
-                            <th>Items</th>
-                            <th>Subtotal</th>
-                            <th>Discount</th>
-                            <th>After Discount</th>
-                            <th>Tax</th>
-                            <th>Total</th>
-                            <th>Profit</th>
-                            <th>Payment</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
+                       <th>ID</th>
+<th>Date</th>
+<th>Customer</th>
+<th>Cashier</th>
+<th>Items</th>
+<th>Subtotal</th>
+<th>Discount</th>
+<th>Tax</th>
+<th>Total</th>
+<th>Profit</th>
+<th>Payment</th>
+<th>Payment Status</th>
+<th>Status</th>
+<th>Actions</th>
+
                     </thead>
                 </table>
             </div>
@@ -93,22 +92,23 @@ $(document).ready(function() {
                     d.date_to = $('#dateTo').val();
                 }
             },
-            columns: [
-                { data: 'id' },
-                { data: 'date' },
-                { data: 'customer' },
-                { data: 'user' },
-                { data: 'items_count', searchable: false },
-                { data: 'subtotal'},
-                { data: 'discount'},
-                { data: 'afterdiscount' },
-                { data: 'tax_amount'  },
-                { data: 'total_amount' },
-                { data: 'profit'},
-                { data: 'payment_method' },
-                { data: 'status'},
-                { data: 'actions', orderable: false, searchable: false }
-            ],
+           columns: [
+    { data: 'id' },
+    { data: 'date' },
+    { data: 'customer' },
+    { data: 'user' },
+    { data: 'items_count', searchable: false },
+    { data: 'subtotal' },
+    { data: 'discount' },
+    { data: 'tax_amount' },
+    { data: 'total_amount' },
+    { data: 'profit' },
+    { data: 'payment_method' },
+    { data: 'payment_status' },
+    { data: 'status' },
+    { data: 'actions', orderable: false, searchable: false }
+],
+
             order: [[1,'desc']],
             pageLength: 20,
             lengthMenu: [10, 20, 50, 100],
