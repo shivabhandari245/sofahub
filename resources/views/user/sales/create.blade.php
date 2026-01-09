@@ -191,29 +191,42 @@
             <i class="fas fa-credit-card me-1"></i> Payment Method
         </h6>
 
-        <!-- Payment Options -->
-        <div class="row align-items-center mb-2">
-            <div class="col-4">
-                <div class="form-check">
-                    <input class="form-check-input payment-check" type="checkbox" value="cash" id="payCash">
-                    <label class="form-check-label" for="payCash">💵 Cash</label>
-                </div>
-            </div>
-
-            <div class="col-4">
-                <div class="form-check">
-                    <input class="form-check-input payment-check" type="checkbox" value="qr" id="payQR">
-                    <label class="form-check-label" for="payQR">📱 QR</label>
-                </div>
-            </div>
-
-            <div class="col-4">
-                <div class="form-check">
-                    <input class="form-check-input payment-check" type="checkbox" value="cheque" id="payCheque">
-                    <label class="form-check-label" for="payCheque">🧾 Cheque</label>
-                </div>
-            </div>
+<!-- Payment Options -->
+<div class="row align-items-center mb-2">
+    <div class="col-4">
+        <div class="form-check">
+            <input class="form-check-input payment-check"
+                   type="checkbox"
+                   name="payment_method[]"
+                   value="cash"
+                   id="payCash">
+            <label class="form-check-label" for="payCash">💵 Cash</label>
         </div>
+    </div>
+
+    <div class="col-4">
+        <div class="form-check">
+            <input class="form-check-input payment-check"
+                   type="checkbox"
+                   name="payment_method[]"
+                   value="qr"
+                   id="payQR">
+            <label class="form-check-label" for="payQR">📱 QR</label>
+        </div>
+    </div>
+
+    <div class="col-4">
+        <div class="form-check">
+            <input class="form-check-input payment-check"
+                   type="checkbox"
+                   name="payment_method[]"
+                   value="cheque"
+                   id="payCheque">
+            <label class="form-check-label" for="payCheque">🧾 Cheque</label>
+        </div>
+    </div>
+</div>
+
 
       
         <div class="row mt-2" id="paymentRemarksRow" style="display:none;">

@@ -55,4 +55,19 @@ protected $fillable = [
     {
         return $this->items()->sum('quantity');
     }
+
+
+public function getPaymentMethodAttribute($value)
+{
+    if (is_array($value)) {
+        return $value;
+    }
+    $decoded = json_decode($value, true);
+    if (is_string($decoded)) {
+        return json_decode($decoded, true) ?? [];
+    }
+
+    return $decoded ?? [];
+}
+
 }

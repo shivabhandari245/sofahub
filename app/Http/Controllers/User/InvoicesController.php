@@ -118,18 +118,28 @@ public function updatePaymentStatus(Request $request, Sale $sale)
 {
     $validated = $request->validate([
         'payment_status'  => 'required|in:paid,partial,unpaid',
-        'payment_method'  => 'nullable|string|max:255',
+        'payment_method'  => 'nullable|array', // now it's an array
+        'payment_method.*'=> 'in:cash,qr,cheque', // validate individual values
         'payment_remarks' => 'nullable|string|max:500',
     ]);
-
+    // Business rules
+    $paymentMethod = $validated['payment_method'] ?? [];
+    if ($validated['payment_status'] === 'unpaid') {
+        // clear payment info if unpaid
+        $paymentMethod = [];
+        $validated['payment_remarks'] = null;
+    }
+    if ($validated['payment_status'] === 'paid' && empty($paymentMethod)) {
+        return back()->withErrors(['payment_method' => 'Payment method is required for paid sales.']);
+    }
     $sale->update([
         'payment_status'  => $validated['payment_status'],
-        'payment_method'  => $validated['payment_method'] ?? $sale->payment_method,
+        'payment_method'  => $paymentMethod, // store as array
         'payment_remarks' => $validated['payment_remarks'] ?? $sale->payment_remarks,
     ]);
-
     return redirect()->back()->with('success', 'Payment status updated successfully!');
 }
+
 
 
 
