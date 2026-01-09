@@ -110,7 +110,7 @@ $(document).ready(function() {
 ],
 
             order: [[1,'desc']],
-            pageLength: 20,
+            pageLength: 10,
             lengthMenu: [10, 20, 50, 100],
             responsive: true,
             searching: true // enable built-in search

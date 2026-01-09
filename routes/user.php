@@ -52,7 +52,7 @@ Route::get('/sales', [SaleController::class, 'index'])->name('sales.index');
 Route::get('sales/{sale}/print', [SaleController::class, 'print'])->name('sales.print');
 Route::post('sales/{sale}/return', [SaleController::class, 'return'])->name('sales.return');
 Route::get('sales/{sale}', [SaleController::class, 'show'])->name('user.sales.show');
-Route::get('products/ajax', [SaleController::class, 'ajaxList'])->name('user.products.ajax');
+Route::get('products/ajax', [SaleController::class, 'ajaxList'])->name('user.products.ajaxList');
 
  Route::get('/saleitems', [SaleItemController::class, 'index'])->name('saleitems.index');
 Route::post('/saleitems/return/{id}', [SaleItemController::class, 'returnItem'])->name('saleitems.return');

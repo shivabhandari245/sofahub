@@ -101,6 +101,9 @@
             <a href="{{ url('user/sales') }}" class="btn btn-outline-primary">
                 <i class="fas fa-arrow-left"></i> Back
             </a>
+
+            
+
         </div>
         <p class="text-muted mb-0">View all sold products with quantity, subtotal, and profit.</p>
     </div>
@@ -139,29 +142,80 @@
                 </thead>
                 <tbody>
                     @foreach($saleItems as $item)
-                    <tr>
-                        <td>{{ $item->product->id ?? '-' }}</td>
-                        <td>#{{ $item->sale->id ?? '-' }}</td>
-                        <td>{{ $item->product->name ?? '-' }}</td>
-                        <td>{{ $item->quantity }}</td>
-                        <td>Rs {{ number_format($item->unit_price, 2) }}</td>
-                        <td>Rs {{ number_format($item->subtotal, 2) }}</td>
-                        <td>Rs {{ number_format($item->profit, 2) }}</td>
-                        <td>{{ $item->created_at->format('d M Y') }}</td>
-                        <td>{{ $item->status }}</td>
-                        <td>
-                            @if(!$item->is_returned)
-                            <button class="btn btn-warning btn-sm return-btn" data-id="{{ $item->id }}">
-                                <i class="fas fa-undo"></i> Return
-                            </button>
-                            @else
-                            <span class="badge bg-danger">Returned</span>
-                            @endif
-                        </td>
-                    </tr>
-                    @endforeach
+<tr>
+    <td>{{ $item->product->id ?? '-' }}</td>
+    <td>#{{ $item->sale->id ?? '-' }}</td>
+    <td>{{ $item->product->name ?? '-' }}</td>
+
+    {{-- Quantity --}}
+    <td>
+        {{ $item->is_returned ? 0 : $item->quantity }}
+    </td>
+
+    {{-- Unit Price --}}
+    <td>
+        Rs {{ number_format($item->is_returned ? 0 : $item->unit_price) }}
+    </td>
+
+    {{-- Subtotal --}}
+    <td>
+        Rs {{ number_format($item->is_returned ? 0 : $item->subtotal) }}
+    </td>
+
+    {{-- Profit --}}
+    <td>
+        Rs {{ number_format($item->is_returned ? 0 : $item->profit) }}
+    </td>
+
+    <td>{{ $item->created_at->format('d M Y') }}</td>
+
+    {{-- Status --}}
+    <td>
+        @if($item->is_returned)
+            <span class="badge bg-danger">Returned</span>
+        @else
+            <span class="badge bg-success">Sold</span>
+        @endif
+    </td>
+
+    {{-- Actions --}}
+    <td>
+        @if(!$item->is_returned)
+            <button class="btn btn-warning btn-sm return-btn"
+                    data-id="{{ $item->id }}"
+                    data-product="{{ $item->product->name }}">
+                <i class="fas fa-undo"></i> Return
+            </button>
+        @else
+            <button class="btn btn-danger btn-sm reason-btn"
+                    data-product="{{ $item->product->name }}"
+                    data-reason="{{ $item->return_reason }}">
+                <i class="fas fa-info-circle"></i> Returned
+            </button>
+        @endif
+    </td>
+</tr>
+@endforeach
+
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<div id="reasonModal" class="bs-modal">
+    <div class="bs-modal-dialog">
+        <div class="bs-modal-content">
+            <div class="bs-modal-header">
+                <h5 class="bs-modal-title">Return Reason</h5>
+                <button type="button" id="closeReasonModal" class="bs-btn-close">&times;</button>
+            </div>
+            <div class="bs-modal-body">
+                <p id="reasonText"></p>
+            </div>
+            <div class="bs-modal-footer">
+                <button type="button" id="cancelReasonModal" class="btn btn-secondary btn-sm">Close</button>
+            </div>
         </div>
     </div>
 </div>
@@ -252,6 +306,21 @@ $(document).ready(function() {
     // Close when clicking outside
     modal.addEventListener('click', function(e) {
         if (e.target === modal) closeModal();
+    });
+
+     $('.reason-btn').click(function() {
+        let productName = $(this).data('product');
+        let reason = $(this).data('reason');
+
+        $('#reasonText').text(reason);
+        $('#reasonModal .bs-modal-title').text('Return Reason for ' + productName);
+        $('#reasonModal').show();
+    });
+
+    // Close reason modal
+    $('#closeReasonModal, #cancelReasonModal').click(function() {
+        $('#reasonModal').hide();
+        $('#reasonText').text('');
     });
 
     // Submit handler

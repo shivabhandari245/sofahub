@@ -46,9 +46,19 @@ public function index(Request $request)
             })
             ->addColumn('customer', fn($sale) => $sale->customer->name ?? 'Walk-in')
             ->addColumn('user', fn($sale) => $sale->user->name ?? 'N/A')
-            ->addColumn('status', fn($sale) => $sale->returned 
-                ? '<span class="badge bg-danger">Returned</span>'
-                : '<span class="badge bg-success">Completed</span>')
+           ->addColumn('status', function($sale) {
+    switch($sale->status) {
+        case 'returned':
+            return '<span class="badge bg-danger">Returned</span>';
+        case 'partially_returned':
+            return '<span class="badge bg-warning">Partially Returned</span>';
+        case 'completed':
+        default:
+            return '<span class="badge bg-success">Completed</span>';
+    }
+})
+
+
             ->editColumn('date', fn($sale) => $sale->date->format('d M Y h:i A'))
             ->editColumn('subtotal', fn($sale)=>$sale->subtotal)
             ->editColumn('discount', fn($sale) => $sale->discount, 2)
@@ -80,36 +90,59 @@ public function index(Request $request)
 
 public function ajaxList(Request $request)
 {
+    $columns = [
+        0 => 'name',
+        1 => 'category',
+        2 => 'quality',
+        3 => 'cost_per_product',
+        4 => 'quantity',
+    ];
+
     $query = ProductModel::where('quantity', '>', 0);
 
+    // Category filter
     if ($request->filled('category_id')) {
         $query->where('category', trim($request->category_id));
     }
 
-    if ($request->filled('search')) {
-        $search = $request->search;
+    // Global search (DataTables)
+    if ($search = $request->input('search.value')) {
         $query->where(function ($q) use ($search) {
             $q->where('name', 'like', "%{$search}%")
               ->orWhere('category', 'like', "%{$search}%");
         });
     }
 
-    $products = $query->orderBy('name')->paginate(10);
+    $totalRecords = $query->count();
+
+    // Ordering
+    $orderColumnIndex = $request->input('order.0.column', 0);
+    $orderDirection   = $request->input('order.0.dir', 'asc');
+    $orderColumn      = $columns[$orderColumnIndex] ?? 'name';
+
+    $query->orderBy($orderColumn, $orderDirection);
+
+    // Pagination (DataTables uses start & length)
+    $start  = $request->input('start', 0);
+    $length = $request->input('length', 10);
+
+    $products = $query->skip($start)->take($length)->get();
 
     return response()->json([
-        'data' => $products->map(fn($product) => [
-            'id' => $product->id,
-            'name' => $product->name,
-            'quantity' => $product->quantity,
-            'cost_per_product' => $product->cost_per_product,
-            'category' => $product->category,
-            'quality' => $product->quality,
-        ]),
-        'current_page' => $products->currentPage(),
-        'last_page' => $products->lastPage(),
-        'total' => $products->total(),
+        'draw'            => intval($request->input('draw')),
+        'recordsTotal'    => $totalRecords,
+        'recordsFiltered' => $totalRecords,
+        'data' => $products->map(fn ($product) => [
+            'id'               => $product->id,
+            'name'             => $product->name,
+            'category'         => $product->category,
+            'quality'          => $product->quality,
+            'cost_per_product' => number_format($product->cost_per_product, 2),
+            'quantity'         => $product->quantity,
+        ])
     ]);
 }
+
 
 
 public function getCustomers(Request $request)
@@ -126,6 +159,7 @@ public function getCustomers(Request $request)
 
     return response()->json($customers);
 }
+
 
 public function store(Request $request)
 {
@@ -173,7 +207,7 @@ public function store(Request $request)
             'total_amount'    => 0,
             'profit'          => 0,
             'profitafterdiscount' => 0,
-            'user_id'         => auth()->id(),
+            'user_id'         => Auth::id(),
             'status'          => 'completed',
 
             // Payment info
