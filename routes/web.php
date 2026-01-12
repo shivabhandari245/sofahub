@@ -9,27 +9,24 @@ use Illuminate\Support\Facades\Route;
 
 
 use App\Http\Controllers\Auth\OtpController;
-use App\Http\Controllers\User\PurchaseController;
+
 use Illuminate\Support\Facades\Auth;
+
 
 Route::get('/', function () {
     if (Auth::check()) {
-       
         $user = Auth::user();
- 
 
-return match ($user->role) {
-    'admin' => redirect()->route('admin.dashboard'),
-    'user'  => redirect()->route('user.userproducts.dashboard'),
-
-    default => redirect()->route('waitingapproval'),
-};
-
+        return match ($user->role) {
+            'admin' => redirect()->route('admin.dashboard'),
+            'user'  => redirect()->route('user.userproducts.dashboard'),
+            default => redirect()->route('login'),
+        };
     }
 
-    
-    return view('index');
+    return app(\App\Http\Controllers\HomeController::class)->index();
 });
+
 
 
 // Show OTP verification form

@@ -3,37 +3,17 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class Sale extends Model
 {
-protected $fillable = [
-    'user_id',
-    'customer_id',
-    'subtotal',
-    'tax_rate',
-    'tax_amount',
-    'discount',
-    'afterdiscount',
-    'total_amount',
-    'profit',
-     'profitafterdiscount',
-    'status',
-
-    // 💳 payment
-    'payment_status',
-    'payment_method',
-    'payment_remarks',
-];
-
-
-
-
+    protected $guarded = ['id', 'user_id'];
 
     protected $casts = [
-    'payment_method' => 'array',
-    'date' => 'datetime',
-    'returned_at' => 'datetime',
-];
+        'payment_method' => 'array',
+        'date' => 'datetime',
+        'returned_at' => 'datetime',
+    ];
 
     public function user()
     {
@@ -50,24 +30,30 @@ protected $fillable = [
         return $this->hasMany(SaleItem::class);
     }
 
-    
     public function totalQuantity()
     {
         return $this->items()->sum('quantity');
     }
 
+    public function getPaymentMethodAttribute($value)
+    {
+        if (is_array($value)) {
+            return $value;
+        }
 
-public function getPaymentMethodAttribute($value)
-{
-    if (is_array($value)) {
-        return $value;
+        $decoded = json_decode($value, true);
+
+        return is_array($decoded) ? $decoded : [];
     }
-    $decoded = json_decode($value, true);
-    if (is_string($decoded)) {
-        return json_decode($decoded, true) ?? [];
+
+    public function resolveRouteBinding($value, $field = null)
+    {
+        if (!Auth::check()) {
+            abort(404);
+        }
+
+        return $this->where('id', $value)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
     }
-
-    return $decoded ?? [];
-}
-
 }

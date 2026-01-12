@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
@@ -8,34 +9,36 @@ use App\Models\ProductModel;
 use App\Models\UserCategory;
 use App\Models\UserSupplier;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class UserPurchaseController extends Controller
 {
+     use AuthorizesRequests;
     // List purchase page
     public function index()
     {
         $categories = UserCategory::pluck('name');
         $suppliers = UserSupplier::pluck('name');
-        return view('user.userproducts.purchase', compact('categories','suppliers'));
+        return view('user.userproducts.purchase', compact('categories', 'suppliers'));
     }
 
     // Store new purchase
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'product_name'=>'required|string|max:255',
-            'category'=>'required|string|max:255',
-            'supplier_name'=>'required|string|max:255',
-            'supplier_contact'=>'nullable|string|max:255',
-            'quantity'=>'required|integer|min:1',
-            'unit_cost'=>'required|numeric|min:0',
-            'quality'=>'nullable|string|max:255',
-            'delivery_date'=>'nullable|date',
+            'product_name' => 'required|string|max:255',
+            'category' => 'required|string|max:255',
+            'supplier_name' => 'required|string|max:255',
+            'supplier_contact' => 'nullable|string|max:255',
+            'quantity' => 'required|integer|min:1',
+            'unit_cost' => 'required|numeric|min:0',
+            'quality' => 'nullable|string|max:255',
+            'delivery_date' => 'nullable|date',
         ]);
 
-        DB::transaction(function() use ($validated) {
+        DB::transaction(function () use ($validated) {
             $category = UserCategory::firstOrCreate(['name' => $validated['category']]);
             $supplier = UserSupplier::firstOrCreate(
                 ['name' => $validated['supplier_name']],
@@ -44,6 +47,7 @@ class UserPurchaseController extends Controller
 
             $total = $validated['quantity'] * $validated['unit_cost'];
 
+            // Create Purchase
             $purchase = PurchaseModel::create([
                 'user_id' => Auth::id(),
                 'product_name' => $validated['product_name'],
@@ -58,6 +62,7 @@ class UserPurchaseController extends Controller
                 'status' => 'Purchased',
             ]);
 
+            // Create Product in stock
             ProductModel::create([
                 'user_id' => Auth::id(),
                 'name' => $validated['product_name'],
@@ -70,7 +75,7 @@ class UserPurchaseController extends Controller
             ]);
         });
 
-        return response()->json(['message'=>'Purchase saved successfully!']);
+        return response()->json(['message' => 'Purchase saved successfully!']);
     }
 
     // Fetch latest purchases with search & pagination
@@ -88,18 +93,18 @@ class UserPurchaseController extends Controller
             });
         }
 
-        $totalData = PurchaseModel::where('user_id',Auth::id())->count();
+        $totalData = PurchaseModel::where('user_id', Auth::id())->count();
         $totalFiltered = $query->count();
 
         $purchases = $query
-            ->offset($request->input('start',0))
-            ->limit($request->input('length',10))
-            ->orderBy($columns[$request->input('order.0.column',0)], $request->input('order.0.dir','desc'))
+            ->offset($request->input('start', 0))
+            ->limit($request->input('length', 10))
+            ->orderBy($columns[$request->input('order.0.column', 0)], $request->input('order.0.dir','desc'))
             ->get();
 
-        $data = $purchases->map(function($purchase, $index) use ($request) {
+        $data = $purchases->map(function ($purchase, $index) use ($request) {
             return [
-                'DT_RowIndex' => $request->input('start',0) + $index + 1,
+                'DT_RowIndex' => $request->input('start', 0) + $index + 1,
                 'id' => $purchase->id,
                 'product_name' => $purchase->product_name,
                 'category' => $purchase->category,
@@ -121,16 +126,17 @@ class UserPurchaseController extends Controller
         ]);
     }
 
-    
+    // Show purchase for editing
     public function edit(PurchaseModel $purchase)
     {
-        $this->authorizePurchase($purchase);
+        $this->authorize('view', $purchase); // ✅ Using Policy
         return response()->json($purchase);
     }
 
+    // Update purchase
     public function update(Request $request, PurchaseModel $purchase)
     {
-        $this->authorizePurchase($purchase);
+        $this->authorize('update', $purchase); // ✅ Using Policy
 
         $validated = $request->validate([
             'product_name'=>'required|string|max:255',
@@ -160,18 +166,11 @@ class UserPurchaseController extends Controller
         return response()->json(['message'=>'Purchase updated successfully!']);
     }
 
+    // Delete purchase
     public function destroy(PurchaseModel $purchase)
     {
-        $this->authorizePurchase($purchase);
+        $this->authorize('delete', $purchase); // ✅ Using Policy
         $purchase->delete();
         return response()->json(['message'=>'Purchase deleted successfully!']);
-    }
-
-    // Ownership check helper
-    private function authorizePurchase(PurchaseModel $purchase)
-    {
-        if ($purchase->user_id !== Auth::id()) {
-            abort(403, 'Unauthorized action.');
-        }
     }
 }

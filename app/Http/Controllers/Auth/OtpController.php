@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use App\Models\User;
 use App\Services\OtpService;
 use Illuminate\Support\Facades\Log;
+
 class OtpController extends Controller
 {
     protected OtpService $otpService;
@@ -48,18 +49,13 @@ class OtpController extends Controller
             ]);
         }
 
-        // Validate OTP with rate limiting & automatic marking verified
         if (!$this->otpService->validate($user, $request->otp)) {
             return back()->withErrors(['otp' => 'Invalid or expired OTP.']);
         }
 
-        // Login user securely
         Auth::login($user);
-
-        // Clear OTP session
         session()->forget('otp_user_id');
 
-        // Redirect based on role
         return match ($user->role) {
             'admin' => redirect()->intended(route('admin.dashboard')),
             'user' => redirect()->intended(route('user.userproducts.dashboard')),
@@ -67,32 +63,39 @@ class OtpController extends Controller
         };
     }
 
-public function resend(Request $request)
-{
-    $userId = session('otp_user_id');
-    $user = User::find($userId);
+    // Resend OTP via AJAX
+    public function resend(Request $request)
+    {
+        $userId = session('otp_user_id');
+        $user = User::find($userId);
 
-    if (!$user) {
-        return redirect()->route('login')->withErrors(['otp' => 'User not found. Please login again.']);
+        if (!$user) {
+            return response()->json([
+                'error' => 'User not found. Please login again.'
+            ], 404);
+        }
+
+        $key = 'otp-resend:' . $user->id;
+
+        if (! $this->otpService->canResend($user)) {
+            $seconds = RateLimiter::availableIn($key);
+            return response()->json([
+                'error' => "Please wait {$seconds} seconds before resending OTP.",
+                'seconds' => $seconds
+            ], 429);
+        }
+
+        try {
+            $this->otpService->resend($user);
+        } catch (\Exception $e) {
+            Log::error('OTP resend failed for user '.$user->id.': '.$e->getMessage());
+            return response()->json([
+                'error' => 'Failed to resend OTP. Please try again later.'
+            ], 500);
+        }
+
+        return response()->json([
+            'message' => 'A new OTP has been sent to your email.'
+        ]);
     }
-
-    $key = 'otp-resend:' . $user->id;
-
-    if (! $this->otpService->canResend($user)) {
-        $seconds = RateLimiter::availableIn($key);
-        return back()->withErrors(['otp' => "Please wait {$seconds} seconds before resending OTP."]);
-    }
-
-    try {
-        $this->otpService->resend($user);
-    } catch (\Exception $e) {
-        Log::error('OTP resend failed for user '.$user->id.': '.$e->getMessage());
-
-        return back()->withErrors(['otp' => 'Failed to resend OTP. Please try again later.']);
-    }
-
-    return back()->with('message', 'A new OTP has been sent to your email.');
-}
-
-
 }

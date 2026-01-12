@@ -1,5 +1,5 @@
 <x-guest-layout>
-    <div class="w-full sm:max-w-md mt-6 px-8 py-8 bg-gray-800 dark:bg-gray-900 shadow-lg rounded-lg overflow-hidden">
+    <div class="w-full sm:max-w-md mt-6 px-8 py-8 bg-gray-800 shadow-lg rounded-lg">
         <div class="flex justify-center mb-6">
             <x-application-logo class="w-20 h-20 fill-current text-gray-400" />
         </div>
@@ -10,26 +10,20 @@
             <div class="text-green-500 text-center mb-4">{{ session('message') }}</div>
         @endif
 
-        @if(session('error'))
-            <div class="text-red-500 text-center mb-4">{{ session('error') }}</div>
-        @endif
-
         <form method="POST" action="{{ route('otp.verify') }}" class="space-y-6">
             @csrf
             <div>
                 <label for="otp" class="block text-sm font-medium text-gray-300">OTP Code</label>
                 <input type="text" id="otp" name="otp" required maxlength="6"
-                       class="mt-1 block w-full px-4 py-3 border border-gray-600 rounded-md shadow-sm
-                              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                              sm:text-base dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                       class="mt-1 block w-full px-4 py-3 border border-gray-600 rounded-md
+                              focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-base dark:bg-gray-700 dark:text-white" />
                 @error('otp')
                     <span class="text-red-500 text-sm mt-1 block">{{ $message }}</span>
                 @enderror
             </div>
 
             <button type="submit"
-                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-md
-                           focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500">
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-md">
                 Verify
             </button>
         </form>
@@ -94,31 +88,29 @@
                     'Accept': 'application/json'
                 }
             })
-            .then(response => {
-                if (!response.ok) throw response;
-                return response.json();
-            })
-            .then(data => {
-                if (data.message) {
-                    resendMessage.textContent = data.message;
-                    resendMessage.classList.remove('text-red-600');
-                    resendMessage.classList.add('text-green-600');
-                    startCountdown(30);
-                } else if (data.error) {
-                    resendAlert.textContent = data.error;
+            .then(async response => {
+                const data = await response.json();
+                if (response.ok) {
+                    if (data.message) {
+                        resendMessage.textContent = data.message;
+                        resendMessage.classList.remove('text-red-600');
+                        resendMessage.classList.add('text-green-600');
+                        startCountdown(30);
+                    }
+                } else {
+                    resendAlert.textContent = data.error || 'Please wait before resending OTP.';
                     resendAlert.classList.remove('hidden');
-                    const match = data.error.match(/(\d+)\s*seconds?/);
-                    if (match) startCountdown(parseInt(match[1], 10));
+                    if (data.seconds) startCountdown(data.seconds);
                 }
             })
             .catch(async (err) => {
                 resendBtn.disabled = false;
+                let errorMsg = 'Server error. Please try again later.';
                 try {
                     const data = await err.json();
-                    resendAlert.textContent = data.message || 'Too many requests. Please wait.';
-                } catch {
-                    resendAlert.textContent = 'Server error. Please try again later.';
-                }
+                    errorMsg = data.message || errorMsg;
+                } catch {}
+                resendAlert.textContent = errorMsg;
                 resendAlert.classList.remove('hidden');
             });
         });
