@@ -6,17 +6,24 @@
 
         <h2 class="text-xl font-semibold text-center text-gray-200 mb-6">Verify OTP</h2>
 
+        {{-- Session Messages --}}
         @if(session('message'))
             <div class="text-green-500 text-center mb-4">{{ session('message') }}</div>
         @endif
 
+        @if(session('error'))
+            <div class="text-red-500 text-center mb-4">{{ session('error') }}</div>
+        @endif
+
+        {{-- OTP Form --}}
         <form method="POST" action="{{ route('otp.verify') }}" class="space-y-6">
             @csrf
             <div>
                 <label for="otp" class="block text-sm font-medium text-gray-300">OTP Code</label>
-                <input type="text" id="otp" name="otp" required maxlength="6"
+                <input type="text" id="otp" name="otp" required maxlength="6" pattern="\d{6}"
                        class="mt-1 block w-full px-4 py-3 border border-gray-600 rounded-md
-                              focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-base dark:bg-gray-700 dark:text-white" />
+                              focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-base dark:bg-gray-700 dark:text-white"
+                       autofocus />
                 @error('otp')
                     <span class="text-red-500 text-sm mt-1 block">{{ $message }}</span>
                 @enderror
@@ -28,8 +35,9 @@
             </button>
         </form>
 
+        {{-- Resend OTP --}}
         <div class="mt-6 text-center">
-            <button id="resend-btn" 
+            <button id="resend-btn"
                     class="text-blue-500 underline text-sm hover:text-blue-700 disabled:text-gray-500 disabled:cursor-not-allowed">
                 Resend OTP
             </button>
@@ -49,10 +57,12 @@
         let countdown = 0;
         let interval = null;
 
+        // Clear previous interval
         function clearCountdown() {
             if (interval) { clearInterval(interval); interval = null; }
         }
 
+        // Start countdown
         function startCountdown(seconds) {
             clearCountdown();
             countdown = seconds;
@@ -76,8 +86,9 @@
             countdownText.textContent = countdown > 0 ? `(${countdown}s)` : '';
         }
 
+        // Resend button click
         resendBtn.addEventListener('click', function () {
-            resendBtn.disabled = true; 
+            resendBtn.disabled = true;
             resendMessage.textContent = '';
             resendAlert.classList.add('hidden');
 
@@ -95,7 +106,7 @@
                         resendMessage.textContent = data.message;
                         resendMessage.classList.remove('text-red-600');
                         resendMessage.classList.add('text-green-600');
-                        startCountdown(30);
+                        startCountdown(30); // reset countdown
                     }
                 } else {
                     resendAlert.textContent = data.error || 'Please wait before resending OTP.';
@@ -114,5 +125,6 @@
                 resendAlert.classList.remove('hidden');
             });
         });
+
     </script>
 </x-guest-layout>

@@ -12,12 +12,12 @@ use App\Models\UserCategory;
 use Illuminate\Support\Facades\DB;
 
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+
 use Yajra\DataTables\Facades\DataTables;
 
 class SaleController extends Controller
 {
-    use AuthorizesRequests;
+    
 
 public function index(Request $request)
 {
@@ -82,20 +82,18 @@ public function index(Request $request)
 
 
 
-    public function create()
-    {
-        
-       $products = ProductModel::where('user_id', Auth::id())
-            ->where('quantity', '>', 0)
-            ->orderBy('name')
-            ->get();
+  public function create()
+{
+    $products = ProductModel::where('user_id', Auth::id())
+        ->where('quantity', '>', 0)
+        ->orderBy('name')
+        ->get();
 
-        $categories = UserCategory::where('user_id', Auth::id())
-            ->orderBy('name')
-            ->get();
-              $categories = UserCategory::orderBy('name')->get();      
-        return view('user.sales.create', compact('products', 'categories'));
-    }
+    $categories = UserCategory::orderBy('name')->get();
+
+    return view('user.sales.create', compact('products', 'categories'));
+}
+
 
 public function ajaxList(Request $request)
 {
@@ -176,10 +174,7 @@ public function store(Request $request)
 
 {
 
-
-    $this->authorize('create', Sale::class);
-
-    $validated = $request->validate([
+       $validated = $request->validate([
         'customer_id'      => 'required|exists:customers,id',
         'cartItems'        => 'required|json',
         'tax_rate'         => 'nullable|numeric|min:0|max:100',
@@ -299,7 +294,6 @@ public function store(Request $request)
 public function show(Sale $sale)
 
 {
-     $this->authorize('view', $sale);
 
     $sale->load('items.product', 'customer', 'user');
     return view('user.sales.show', compact('sale'));
@@ -307,7 +301,7 @@ public function show(Sale $sale)
 
 public function print(Sale $sale)
 {
-    $this->authorize('view', $sale);
+    
     $sale->load('items.product', 'customer', 'user');
 
   

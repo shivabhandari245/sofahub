@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use App\Models\User;
 use App\Services\OtpService;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\RedirectResponse;
 
 class OtpController extends Controller
 {
@@ -34,7 +35,7 @@ class OtpController extends Controller
     }
 
     // Verify submitted OTP
-    public function verify(Request $request)
+    public function verify(Request $request): RedirectResponse
     {
         $request->validate([
             'otp' => 'required|digits:6',
@@ -53,14 +54,16 @@ class OtpController extends Controller
             return back()->withErrors(['otp' => 'Invalid or expired OTP.']);
         }
 
+        // Mark OTP as verified (optional, if you track it in DB)
+        $user->otp_verified = true;
+        $user->save();
+
+        // Log the user in
         Auth::login($user);
         session()->forget('otp_user_id');
 
-        return match ($user->role) {
-            'admin' => redirect()->intended(route('admin.dashboard')),
-            'user' => redirect()->intended(route('user.userproducts.dashboard')),
-            default => redirect()->route('waitingapproval'),
-        };
+        // Redirect based on role
+        return $this->redirectBasedOnRole($user);
     }
 
     // Resend OTP via AJAX
@@ -97,5 +100,23 @@ class OtpController extends Controller
         return response()->json([
             'message' => 'A new OTP has been sent to your email.'
         ]);
+    }
+
+    /**
+     * Redirect user based on role (robust)
+     */
+    protected function redirectBasedOnRole(User $user): RedirectResponse
+    {
+        // Use the hasRole method from the User model
+        if ($user->hasRole('admin')) {
+            return redirect()->intended(route('admin.dashboard'));
+        }
+
+        if ($user->hasRole('user')) {
+            return redirect()->intended(route('user.userproducts.dashboard'));
+        }
+
+        // Default fallback
+        return redirect()->route('waitingapproval');
     }
 }
