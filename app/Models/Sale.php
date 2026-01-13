@@ -7,12 +7,12 @@ use Illuminate\Support\Facades\Auth;
 
 class Sale extends Model
 {
-    protected $guarded = ['id', 'user_id'];
+    protected $guarded = ['id'];
 
     protected $casts = [
-        'payment_method' => 'array',
         'date' => 'datetime',
         'returned_at' => 'datetime',
+        // Do NOT cast payment_method here
     ];
 
     public function user()
@@ -35,6 +35,9 @@ class Sale extends Model
         return $this->items()->sum('quantity');
     }
 
+    /**
+     * Accessor: always decode payment_method from JSON
+     */
     public function getPaymentMethodAttribute($value)
     {
         if (is_array($value)) {
@@ -44,6 +47,37 @@ class Sale extends Model
         $decoded = json_decode($value, true);
 
         return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * Accessor for DataTables / frontend display
+     */
+    public function getPaymentMethodDisplayAttribute()
+    {
+        $methods = $this->payment_method;
+
+        if (!empty($methods)) {
+            return implode(', ', array_map(fn($m) => ucfirst($m), $methods));
+        }
+
+        return 'N/A';
+    }
+
+    /**
+     * Payment status display
+     */
+    public function getPaymentStatusDisplayAttribute()
+    {
+        switch ($this->payment_status) {
+            case 'paid':
+                return 'Paid';
+            case 'unpaid':
+                return 'Unpaid';
+            case 'partially_paid':
+                return 'Partially Paid';
+            default:
+                return '-';
+        }
     }
 
     public function resolveRouteBinding($value, $field = null)

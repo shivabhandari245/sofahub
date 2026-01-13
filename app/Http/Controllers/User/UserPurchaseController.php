@@ -9,13 +9,14 @@ use App\Models\ProductModel;
 use App\Models\UserCategory;
 use App\Models\UserSupplier;
 use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class UserPurchaseController extends Controller
 {
-    
+     use AuthorizesRequests;
+    // List purchase page
     public function index()
     {
         $categories = UserCategory::pluck('name');
@@ -128,14 +129,14 @@ class UserPurchaseController extends Controller
     // Show purchase for editing
     public function edit(PurchaseModel $purchase)
     {
-      
+        $this->authorize('view', $purchase); // ✅ Using Policy
         return response()->json($purchase);
     }
 
     // Update purchase
     public function update(Request $request, PurchaseModel $purchase)
     {
-     
+        $this->authorize('update', $purchase); // ✅ Using Policy
 
         $validated = $request->validate([
             'product_name'=>'required|string|max:255',
@@ -168,7 +169,7 @@ class UserPurchaseController extends Controller
     // Delete purchase
     public function destroy(PurchaseModel $purchase)
     {
-       
+        $this->authorize('delete', $purchase); // ✅ Using Policy
         $purchase->delete();
         return response()->json(['message'=>'Purchase deleted successfully!']);
     }
