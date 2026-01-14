@@ -3,37 +3,17 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class Sale extends Model
 {
-protected $fillable = [
-    'user_id',
-    'customer_id',
-    'subtotal',
-    'tax_rate',
-    'tax_amount',
-    'discount',
-    'afterdiscount',
-    'total_amount',
-    'profit',
-     'profitafterdiscount',
-    'status',
-
-    // 💳 payment
-    'payment_status',
-    'payment_method',
-    'payment_remarks',
-];
-
-
-
-
+    protected $guarded = ['id'];
 
     protected $casts = [
-    'payment_method' => 'array',
-    'date' => 'datetime',
-    'returned_at' => 'datetime',
-];
+        'date' => 'datetime',
+        'returned_at' => 'datetime',
+        // Do NOT cast payment_method here
+    ];
 
     public function user()
     {
@@ -50,24 +30,64 @@ protected $fillable = [
         return $this->hasMany(SaleItem::class);
     }
 
-    
     public function totalQuantity()
     {
         return $this->items()->sum('quantity');
     }
 
+    /**
+     * Accessor: always decode payment_method from JSON
+     */
+    public function getPaymentMethodAttribute($value)
+    {
+        if (is_array($value)) {
+            return $value;
+        }
 
-public function getPaymentMethodAttribute($value)
-{
-    if (is_array($value)) {
-        return $value;
+        $decoded = json_decode($value, true);
+
+        return is_array($decoded) ? $decoded : [];
     }
-    $decoded = json_decode($value, true);
-    if (is_string($decoded)) {
-        return json_decode($decoded, true) ?? [];
+
+    /**
+     * Accessor for DataTables / frontend display
+     */
+    public function getPaymentMethodDisplayAttribute()
+    {
+        $methods = $this->payment_method;
+
+        if (!empty($methods)) {
+            return implode(', ', array_map(fn($m) => ucfirst($m), $methods));
+        }
+
+        return 'N/A';
     }
 
-    return $decoded ?? [];
-}
+    /**
+     * Payment status display
+     */
+    public function getPaymentStatusDisplayAttribute()
+    {
+        switch ($this->payment_status) {
+            case 'paid':
+                return 'Paid';
+            case 'unpaid':
+                return 'Unpaid';
+            case 'partially_paid':
+                return 'Partially Paid';
+            default:
+                return '-';
+        }
+    }
 
+    public function resolveRouteBinding($value, $field = null)
+    {
+        if (!Auth::check()) {
+            abort(404);
+        }
+
+        return $this->where('id', $value)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+    }
 }

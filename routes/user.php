@@ -17,7 +17,7 @@ use App\Http\Controllers\User\UserCustomerController;
 
 use Spatie\Permission\Middleware\RoleMiddleware;
 
-Route::prefix('user')->middleware(['auth', RoleMiddleware::using('user')])->group(function () {
+Route::prefix('user')->middleware(['auth', RoleMiddleware::using('user|admin')])->group(function () {
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])

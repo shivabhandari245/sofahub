@@ -7,12 +7,17 @@ use App\Models\SaleItem;
 use App\Models\ProductModel;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $userId = Auth::id();
+        if (Auth::user()->role === 'admin' && $request->filled('user_id')) {
+        $userId = $request->user_id; // Admin viewing another user
+    } else {
+        $userId = Auth::id(); // Normal user
+    }
 
         // Total Sales
         $totalSales = Sale::where('user_id', $userId)->sum('total_amount');
@@ -110,9 +115,11 @@ class DashboardController extends Controller
         ));
     }
 
-    public function getDashboardData()
+    public function getDashboardData(Request $request)
     {
-        $userId = Auth::id();
+      $userId = Auth::user()->role === 'admin' && $request->filled('user_id')
+        ? $request->user_id
+        : Auth::id();
         
         return response()->json([
             'success' => true,

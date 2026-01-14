@@ -3,99 +3,81 @@
 namespace App\Services;
 
 use App\Models\User;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Facades\Log;
-use App\Mail\OtpMail;
+use Illuminate\Support\Facades\Mail;
 
 class OtpService
 {
-    protected int $otpLength = 6;
-    protected int $otpExpiryMinutes = 5;
+    protected int $otpLength = 6; // 6-digit OTP
+    protected int $otpTTL = 5 * 60; // 5 minutes
+    protected int $resendTTL = 30; // 30 seconds
 
-    // Generate OTP and send email
-    public function generate(User $user)
+    /**
+     * Generate OTP for a user and store in cache
+     */
+    public function generate(User $user): string
     {
-        $otp = random_int(100000, 999999);
+        $otp = (string) random_int(100000, 999999); // always store as string
+        $cacheKey = $this->otpCacheKey($user);
 
-        $user->update([
-            'otp_code' => Hash::make($otp),
-            'otp_expires_at' => now()->addMinutes($this->otpExpiryMinutes),
-            'otp_verified' => false,
-        ]);
+        Cache::put($cacheKey, $otp, $this->otpTTL);
+        RateLimiter::hit($this->resendCacheKey($user), $this->resendTTL);
 
-        try {
-            Mail::to($user->email)->send(new OtpMail($otp));
-        } catch (\Exception $e) {
-            Log::error("Failed to send OTP to {$user->email}: " . $e->getMessage());
-        }
+        $this->sendOtp($user, $otp);
 
-        // Only log OTP in local/dev
-        if (app()->environment('local')) {
-            Log::info("OTP for {$user->email}: $otp");
-        }
-
-        return true;
+        return $otp;
     }
 
-    // Validate OTP with rate limiting
+    /**
+     * Validate OTP safely
+     */
     public function validate(User $user, string $otp): bool
     {
-        $key = 'otp-attempt:' . $user->id;
+        $cacheKey = $this->otpCacheKey($user);
+        $storedOtp = Cache::get($cacheKey);
 
-        if (RateLimiter::tooManyAttempts($key, 5)) {
-            return false; // Block after 5 attempts
+        // Ensure both are strings for hash_equals
+        if ($storedOtp !== null && hash_equals((string) $storedOtp, $otp)) {
+            Cache::forget($cacheKey); // single-use
+            return true;
         }
 
-        $isValid = $user->otpIsValid($otp);
-
-        if ($isValid) {
-            $user->markOtpVerified();
-            RateLimiter::clear($key);
-        } else {
-            RateLimiter::hit($key, 300); // 5 minute lockout
-        }
-
-        return $isValid;
-    }
-
-    public function canResend(User $user, int $maxAttempts = 1, int $decaySeconds = 60): bool
-{
-    $key = 'otp-resend:' . $user->id;
-
-    if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
         return false;
     }
 
-    RateLimiter::hit($key, $decaySeconds);
+    /**
+     * Check if user can resend OTP
+     */
+    public function canResend(User $user): bool
+    {
+        $key = $this->resendCacheKey($user);
+        return RateLimiter::remaining($key, 1) > 0;
+    }
+    
 
-    return true;
-}
-
-public function resend(User $user)
-{
-    $otp = random_int(100000, 999999);
-
-    $user->update([
-        'otp_code' => Hash::make($otp),
-        'otp_expires_at' => now()->addMinutes(5),
-        'otp_verified' => false,
-    ]);
-
-    try {
-        if ($user->email) {
-            Mail::to($user->email)->send(new OtpMail($otp));
-        } else {
-            Log::warning("OTP resend skipped: User {$user->id} has no email");
-        }
-    } catch (\Exception $e) {
-        Log::error("Failed to resend OTP to {$user->email}: ".$e->getMessage());
+      public function resend(User $user): string
+    {
+        // simply call generate() to create a new OTP and send it
+        return $this->generate($user);
     }
 
-    if (app()->environment('local')) {
-        Log::info("OTP for {$user->email}: $otp");
-    }
-}
 
+    protected function sendOtp(User $user, string $otp): void
+    {
+        Mail::raw("Your OTP code is: $otp", function ($message) use ($user) {
+            $message->to($user->email)
+                    ->subject('Your OTP Code');
+        });
+    }
+
+    protected function otpCacheKey(User $user): string
+    {
+        return 'otp:' . $user->id;
+    }
+
+    protected function resendCacheKey(User $user): string
+    {
+        return 'otp-resend:' . $user->id;
+    }
 }

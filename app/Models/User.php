@@ -9,14 +9,14 @@ use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+
 class User extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable, HasRoles;
 
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
+    protected $guarded = [
+        'id',
         'approved',
         'approved_by',
         'approved_at',
@@ -40,13 +40,12 @@ class User extends Authenticatable implements MustVerifyEmail
         'approved' => 'boolean',
     ];
 
-    // Relation to admin who approved
     public function approvedByAdmin()
     {
-        return $this->belongsTo(User::class, 'approved_by');
+        return $this->belongsTo(User::class, 'approved_by')
+            ->whereHas('roles', fn ($q) => $q->where('name', 'admin'));
     }
 
-    // OTP validation helper
     public function otpIsValid(string $otp): bool
     {
         return $this->otp_code &&
@@ -55,14 +54,12 @@ class User extends Authenticatable implements MustVerifyEmail
                now()->lt($this->otp_expires_at);
     }
 
-    // Can user login (approved & OTP verified)
     public function canLogin(): bool
     {
         return $this->approved && $this->otp_verified;
     }
 
-    // Invalidate OTP after use
-    public function markOtpVerified()
+    public function markOtpVerified(): void
     {
         $this->update([
             'otp_verified' => true,
@@ -71,15 +68,21 @@ class User extends Authenticatable implements MustVerifyEmail
         ]);
     }
 
-    // Audit logging for sensitive changes
     protected static function booted()
     {
         static::updated(function ($user) {
             if ($user->isDirty('approved')) {
-                Log::info("User {$user->id} approved status changed by admin.");
+                Log::info('User approval changed', [
+                    'user_id' => $user->id,
+                    'approved' => $user->approved,
+                    'changed_by' => Auth::id(),
+                ]);
             }
+
             if ($user->isDirty('otp_verified') && $user->otp_verified) {
-                Log::info("OTP verified for user {$user->id}");
+                Log::info('OTP verified', [
+                    'user_id' => $user->id,
+                ]);
             }
         });
     }

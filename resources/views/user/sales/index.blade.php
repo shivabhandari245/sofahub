@@ -103,7 +103,8 @@ $(document).ready(function() {
     { data: 'tax_amount' },
     { data: 'total_amount' },
     { data: 'profit' },
-    { data: 'payment_method' },
+     { data: 'payment_method_display' },
+
     { data: 'payment_status' },
     { data: 'status' },
     { data: 'actions', orderable: false, searchable: false }

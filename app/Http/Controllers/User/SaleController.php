@@ -12,16 +12,20 @@ use App\Models\UserCategory;
 use Illuminate\Support\Facades\DB;
 
 use Illuminate\Support\Facades\Auth;
-use Yajra\DataTables\DataTables;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Yajra\DataTables\Facades\DataTables;
+
 class SaleController extends Controller
 {
+    use AuthorizesRequests;
 
 public function index(Request $request)
 {
     if ($request->ajax()) {
-        $query = Sale::with(['user', 'customer'])
-                     ->withCount('items')
-                     ->orderBy('created_at', 'desc');
+       $query = Sale::with('customer')
+                ->where('user_id', Auth::id())
+                ->withCount('items')
+                ->orderByDesc('created_at');
 
         // Date filters
         if ($request->filled('date_from')) {
@@ -46,6 +50,8 @@ public function index(Request $request)
             })
             ->addColumn('customer', fn($sale) => $sale->customer->name ?? 'Walk-in')
             ->addColumn('user', fn($sale) => $sale->user->name ?? 'N/A')
+          ->addColumn('payment_method_display', fn($sale) => $sale->payment_method_display)
+
            ->addColumn('status', function($sale) {
     switch($sale->status) {
         case 'returned':
@@ -81,9 +87,12 @@ public function index(Request $request)
     public function create()
     {
         
-        $products = ProductModel::where('quantity', '>', 0)
+       $products = ProductModel::where('user_id', Auth::id())
+            ->where('quantity', '>', 0)
             ->orderBy('name')
             ->get();
+
+       
               $categories = UserCategory::orderBy('name')->get();      
         return view('user.sales.create', compact('products', 'categories'));
     }
@@ -98,7 +107,8 @@ public function ajaxList(Request $request)
         4 => 'quantity',
     ];
 
-    $query = ProductModel::where('quantity', '>', 0);
+    $query = ProductModel::where('user_id', Auth::id())
+            ->where('quantity', '>', 0);
 
     // Category filter
     if ($request->filled('category_id')) {
@@ -162,8 +172,13 @@ public function getCustomers(Request $request)
 
 
 public function store(Request $request)
+
+
 {
-    // 1️⃣ Validate the request
+
+
+    $this->authorize('create', Sale::class);
+
     $validated = $request->validate([
         'customer_id'      => 'required|exists:customers,id',
         'cartItems'        => 'required|json',
@@ -282,14 +297,17 @@ public function store(Request $request)
 
 
 public function show(Sale $sale)
+
 {
+     $this->authorize('view', $sale);
+
     $sale->load('items.product', 'customer', 'user');
     return view('user.sales.show', compact('sale'));
 }
 
 public function print(Sale $sale)
 {
-   
+    $this->authorize('view', $sale);
     $sale->load('items.product', 'customer', 'user');
 
   
