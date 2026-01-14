@@ -4,22 +4,28 @@
 
 @section('content')
 <div class="container-fluid">
+
+    {{-- HEADER --}}
     <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <h1 class="h3 mb-0">
-                    Invoice #{{ str_pad($sale->id, 6, '0', STR_PAD_LEFT) }}
-                </h1>
-                <div class="btn-group">
-                    <a href="{{ url('admin/invoices') }}" class="btn btn-primary">
-                        <i class="fas fa-arrow-left"></i> Back to Invoices
-                    </a>
-                </div>
+        <div class="col-md-12 d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-0">
+                Invoice #{{ str_pad($sale->id, 6, '0', STR_PAD_LEFT) }}
+            </h1>
+            <div class="btn-group">
+             <a href="{{ route('sales.print', $sale->id) }}" 
+   class="btn btn-secondary" target="_blank">
+    <i class="fas fa-print"></i> Print
+</a>
+
+                <a href="{{ url('admin/invoices/invoice') }}" class="btn btn-primary">
+                    <i class="fas fa-arrow-left"></i> Back
+                </a>
             </div>
         </div>
     </div>
 
     <div class="row">
+
         {{-- SALE ITEMS --}}
         <div class="col-md-8">
             <div class="card mb-4">
@@ -40,16 +46,16 @@
                         </thead>
                         <tbody>
                             @foreach($sale->items as $item)
-                            <tr>
-                                <td>{{ $item->product->name }}</td>
-                                <td>{{ $item->quantity }}</td>
-                                <td>{{ number_format($item->unit_price, 2) }}</td>
-                                <td>{{ number_format($item->subtotal, 2) }}</td>
-                                <td class="{{ $item->profit >= 0 ? 'text-success' : 'text-danger' }}">
-                                    {{ number_format($item->profit, 2) }}
-                                </td>
-                                <td>{{ ucfirst($item->status) }}</td>
-                            </tr>
+                                <tr>
+                                    <td>{{ $item->product->name }}</td>
+                                    <td>{{ $item->quantity }}</td>
+                                    <td>{{ number_format($item->unit_price, 2) }}</td>
+                                    <td>{{ number_format($item->subtotal, 2) }}</td>
+                                    <td class="{{ $item->profit >= 0 ? 'text-success' : 'text-danger' }}">
+                                        {{ number_format($item->profit, 2) }}
+                                    </td>
+                                    <td>{{ ucfirst($item->status ?? 'sold') }}</td>
+                                </tr>
                             @endforeach
                         </tbody>
                     </table>
@@ -59,6 +65,8 @@
 
         {{-- SALE INFO --}}
         <div class="col-md-4">
+
+            {{-- GENERAL INFO --}}
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0">Sale Information</h5>
@@ -67,7 +75,7 @@
                     <table class="table table-sm">
                         <tr>
                             <th>Date:</th>
-                            <td>{{ $sale->created_at->format('M d, Y h:i A') }}</td>
+                            <td>{{ $sale->date?->format('M d, Y h:i A') }}</td>
                         </tr>
                         <tr>
                             <th>Cashier:</th>
@@ -78,30 +86,28 @@
                             <td>{{ $sale->customer->name ?? 'Walk-in Customer' }}</td>
                         </tr>
                         <tr>
-                            <th>Status:</th>
+                            <th>Sale Status:</th>
                             <td>
-                                @if($sale->returned)
-                                    <span class="badge bg-danger">Returned</span>
-                                @else
-                                    <span class="badge bg-success">Completed</span>
-                                @endif
+                                <span class="badge {{ $sale->returned ? 'bg-danger' : 'bg-success' }}">
+                                    {{ $sale->returned ? 'Returned' : 'Completed' }}
+                                </span>
                             </td>
                         </tr>
-                        @if($sale->returned)
                         <tr>
-                            <th>Return Reason:</th>
-                            <td>{{ $sale->return_reason }}</td>
+                            <th>Payment Status:</th>
+                            <td>
+                                <span class="badge
+                                    {{ $sale->payment_status === 'paid' ? 'bg-success' :
+                                       ($sale->payment_status === 'partial' ? 'bg-warning' : 'bg-danger') }}">
+                                    {{ ucfirst($sale->payment_status) }}
+                                </span>
+                            </td>
                         </tr>
-                        <tr>
-                            <th>Returned At:</th>
-                            <td>{{ $sale->returned_at?->format('M d, Y h:i A') }}</td>
-                        </tr>
-                        @endif
                     </table>
                 </div>
             </div>
 
-            {{-- PAYMENT SUMMARY --}}
+            {{-- PAYMENT / PROFIT SUMMARY --}}
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">Payment Summary</h5>
@@ -113,12 +119,16 @@
                             <td class="text-end">{{ number_format($sale->subtotal, 2) }}</td>
                         </tr>
                         <tr>
-                            <th>Tax ({{ $sale->tax_rate }}%):</th>
-                            <td class="text-end">{{ number_format($sale->tax_amount, 2) }}</td>
-                        </tr>
-                        <tr>
                             <th>Discount:</th>
                             <td class="text-end">-{{ number_format($sale->discount, 2) }}</td>
+                        </tr>
+                        <tr>
+                            <th>After Discount:</th>
+                            <td class="text-end">{{ number_format($sale->afterdiscount, 2) }}</td>
+                        </tr>
+                        <tr>
+                            <th>Tax ({{ $sale->tax_rate }}%):</th>
+                            <td class="text-end">{{ number_format($sale->tax_amount, 2) }}</td>
                         </tr>
                         <tr class="fw-bold table-active">
                             <th>Total:</th>
@@ -130,6 +140,20 @@
                                 {{ number_format($sale->profit, 2) }}
                             </td>
                         </tr>
+                        <tr>
+                            <th>Payment Method:</th>
+                            <td class="text-end">
+                                {{ !empty($sale->payment_method)
+                                    ? ucfirst(implode(', ', $sale->payment_method))
+                                    : 'N/A' }}
+                            </td>
+                        </tr>
+                        @if($sale->payment_remarks)
+                            <tr>
+                                <th>Remarks:</th>
+                                <td class="text-end">{{ $sale->payment_remarks }}</td>
+                            </tr>
+                        @endif
                     </table>
                 </div>
             </div>

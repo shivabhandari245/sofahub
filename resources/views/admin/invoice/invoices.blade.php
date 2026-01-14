@@ -1,207 +1,361 @@
 @extends('layouts.admin')
+
 @section('title', 'Invoices Management')
 
-@section('content')
-
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/admincss/invoices.css') }}" />
-<style>
-    .summary {
-        display: flex;
-        gap: 20px;
-        margin-bottom: 20px;
-    }
+<!-- DataTables CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
 
-    .summary-card {
-        background: #f5f5f5;
-        padding: 15px;
-        border-radius: 8px;
-        flex: 1;
+ <style>
+    /* Professional Stats Cards with Icons - EXACT SAME AS USER */
+    .stats-card {
+        background-color: #fff;
+        border: 1px solid #e0e0e0;
+        border-radius: 0.5rem;
+        padding: 1rem;
         text-align: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
     }
 
-    .top-actions {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 20px;
-        align-items: center;
+    .stats-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
 
-    .search-filter input,
-    .search-filter select {
-        padding: 7px;
-        margin-left: 10px;
-        border-radius: 5px;
-        border: 1px solid #ccc;
+    .stats-card h6 {
+        font-size: 0.85rem;
+        color: #555;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        text-transform: uppercase;
     }
 
-    .table-container {
+    .stats-card h2 {
+        font-size: 1.4rem;
+        margin-bottom: 0.25rem;
+        color: #333;
+    }
+
+    .stats-card small {
+        font-size: 0.75rem;
+        color: #666;
+    }
+
+    /* Icon in card */
+    .stats-card i {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        font-size: 1.5rem;
+        color: #301818ff;
+    }
+
+    /* Payment Status Accent Colors */
+    .bg-paid {
+        border-left: 4px solid #28a745;
+    }
+
+    .bg-unpaid {
+        border-left: 4px solid #dc3545;
+    }
+
+    .bg-partial {
+        border-left: 4px solid #ffc107;
+    }
+
+    /* Filters */
+    .filter-group select,
+    .filter-group .btn {
+        height: calc(1.8em + 0.75rem + 2px);
+        font-size: 0.875rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .stats-card h2 {
+            font-size: 1.2rem;
+        }
+        .stats-card h6 {
+            font-size: 0.75rem;
+        }
+        .stats-card small {
+            font-size: 0.65rem;
+        }
+        .stats-card i {
+            font-size: 1.2rem;
+            top: 10px;
+            right: 10px;
+        }
+    }
+
+    /* Table responsiveness */
+    .table-responsive {
         overflow-x: auto;
     }
 
-    table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    table th,
-    table td {
-        padding: 10px;
-        border: 1px solid #ddd;
-        text-align: left;
-        white-space: nowrap;
-    }
-
-    .btn-view {
-        background-color: #2196F3;
+    /* Payment Status Badges */
+    .badge-paid {
+        background-color: #28a745;
         color: white;
-        padding: 5px 10px;
-        border-radius: 4px;
-        text-decoration: none;
+    }
+    
+    .badge-unpaid {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .badge-pending {
+        background-color: #ffc107;
+        color: #212529;
     }
 
-    .btn-view:hover {
-        background-color: #1976D2;
+    /* Action buttons */
+    .action-btns {
+        display: flex;
+        gap: 5px;
+    }
+
+    /* Status column width */
+    .status-col {
+        width: 100px;
     }
 </style>
 @endpush
 
-<div class="card">
-    <h2>Invoices Management</h2>
-    <p>Track, manage, and monitor showroom and factory invoices efficiently.</p>
+@section('content')
+<div class="container-fluid">
+
+    <!-- Header + Filters - EXACT SAME AS USER -->
+    <div class="row mb-3">
+        <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h4 class="mb-0">Invoices Management</h4>
+                <p class="mb-0 text-muted">Track, manage, and monitor all invoices</p>
+            </div>
+
+            <div class="d-flex gap-2 flex-wrap filter-group">
+                <select id="monthsFilter" class="form-select form-select-sm">
+                    <option value="1" {{ $months==1?'selected':'' }}>Last 1 Month</option>
+                    <option value="3" {{ $months==3?'selected':'' }}>Last 3 Months</option>
+                    <option value="6" {{ $months==6?'selected':'' }}>Last 6 Months</option>
+                    <option value="12" {{ $months==12?'selected':'' }}>Last 12 Months</option>
+                </select>
+
+                <select id="paymentStatusFilter" class="form-select form-select-sm">
+                    <option value="all">All Status</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Unpaid">Unpaid</option>
+                    <option value="Pending">Partial Paid</option>
+                </select>
+
+                <a id="exportPdfBtn"
+                   href="#"
+                   class="btn btn-sm btn-danger">
+                    <i class="fas fa-file-pdf"></i> Export PDF
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards - EXACT SAME AS USER -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="stats-card">
+                <i class="fas fa-file-invoice-dollar"></i>
+                <h6>Total Invoices</h6>
+                <h2>{{ $totalInvoices }}</h2>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stats-card">
+                <i class="fas fa-coins"></i>
+                <h6>Total Revenue</h6>
+                <h2>RS {{ number_format($totalRevenue, 2) }}</h2>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stats-card">
+                <i class="fas fa-percent"></i>
+                <h6>Total Tax</h6>
+                <h2>RS {{ number_format($totalTax, 2) }}</h2>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stats-card">
+                <i class="fas fa-tags"></i>
+                <h6>Total Discount</h6>
+                <h2>RS {{ number_format($totalDiscount, 2) }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Summary - EXACT SAME AS USER -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-4">
+            <div class="stats-card bg-paid">
+                <i class="fas fa-check-circle"></i>
+                <h6>Paid</h6>
+                <h2>{{ $totalPaidCount }} invoices</h2>
+                <small>RS {{ number_format($totalPaidAmount, 2) }}</small>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="stats-card bg-unpaid">
+                <i class="fas fa-times-circle"></i>
+                <h6>Unpaid</h6>
+                <h2>{{ $totalUnpaidCount }} invoices</h2>
+                <small>RS {{ number_format($totalUnpaidAmount, 2) }}</small>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="stats-card bg-partial">
+                <i class="fas fa-adjust"></i>
+                <h6>Partial Paid</h6>
+                <h2>{{ $totalPartialCount }} invoices</h2>
+                <small>
+                    RS {{ number_format($totalPartialAmount, 2) }} received /
+                    RS {{ number_format($totalPartialRemaining, 2) }} remaining
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoices Table -->
+    <div class="card">
+        <div class="card-body table-responsive">
+            <table id="invoicesTable" class="table table-striped table-bordered nowrap" style="width:100%">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Date</th>
+                        <th>Customer</th>
+                        <th>Cashier</th>
+                        <th>Discount</th>
+                        <th>Tax</th>
+                        <th>Total</th>
+                        <th>Actual Profit</th>
+                        <th class="status-col">Payment Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- DataTables will populate this -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
-
-<div class="summary">
-    <div class="summary-card">
-        <h3>Total Invoices</h3>
-        <p id="totalInv">0</p>
-    </div>
-    <div class="summary-card">
-        <h3>Paid</h3>
-        <p id="paidInv">0</p>
-    </div>
-    <div class="summary-card">
-        <h3>Pending</h3>
-        <p id="pendingInv">0</p>
-    </div>
-    <div class="summary-card">
-        <h3>Unpaid</h3>
-        <p id="unpaidInv">0</p>
-    </div>
-</div>
-
-<div class="top-actions">
-    <div class="search-filter">
-        <input type="text" id="searchInput" placeholder="🔍 Search by Client or User">
-        <select id="filterStatus">
-            <option value="all">All Status</option>
-            <option value="Paid">Paid</option>
-            <option value="Pending">Pending</option>
-            <option value="Unpaid">Unpaid</option>
-        </select>
-
-        <button class="btn-add" id="toggleFormBtn">
-            <i class="bi bi-plus-circle"></i> Create Invoice
-        </button>
-    </div>
-</div>
-
-<div class="card">
-    <h3>Recent Invoices</h3>
-
-    <div class="table-container">
-        <table class="data-table" id="invoiceTable">
-            <thead>
-                <tr>
-                    <th>Invoice ID</th>
-                    <th>User</th>
-                    <th>Client</th>
-                    <th>Subtotal</th>
-                    <th>Tax Rate</th>
-                    <th>Tax Amount</th>
-                    <th>Discount</th>
-                    <th>Total Amount</th>
-                    <th>Profit</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-
-            <tbody id="invoiceBody">
-                <!-- JS populated -->
-            </tbody>
-        </table>
-    </div>
-</div>
-
 @endsection
 
 @push('scripts')
+<!-- jQuery -->
+
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const invoiceBody = document.getElementById('invoiceBody');
-    const totalInv = document.getElementById('totalInv');
-    const paidInv = document.getElementById('paidInv');
-    const pendingInv = document.getElementById('pendingInv');
-    const unpaidInv = document.getElementById('unpaidInv');
-    const filterStatus = document.getElementById('filterStatus');
-    const searchInput = document.getElementById('searchInput');
-
-    async function fetchInvoices() {
-        try {
-            const res = await fetch('{{ url("/admin/allinvoices") }}');
-            const data = await res.json();
-            renderTable(data);
-            updateSummary(data);
-        } catch (err) {
-            console.error('Error fetching invoices:', err);
+$(document).ready(function(){
+    // Initialize DataTable
+    const table = $('#invoicesTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{{ url('/admin/invoices/allinvoices') }}",
+            data: function(d){
+                d.months = $('#monthsFilter').val();
+                d.payment_status = $('#paymentStatusFilter').val();
+            }
+        },
+        columns: [
+            { data: 'id', name: 'id' },
+            { data: 'date', name: 'created_at' },
+            { data: 'customer', name: 'customer' },
+            { data: 'cashier', name: 'cashier' },
+            { data: 'discount', name: 'discount', orderable: false },
+            { data: 'tax_amount', name: 'tax_amount', orderable: false },
+            { data: 'total_amount', name: 'total_amount', orderable: false },
+            { data: 'profit', name: 'profit', orderable: false },
+            { 
+                data: 'status', 
+                name: 'status',
+                render: function(data, type, row) {
+                    let badgeClass = 'badge-secondary';
+                    switch(data) {
+                        case 'Paid': badgeClass = 'badge-paid'; break;
+                        case 'Unpaid': badgeClass = 'badge-unpaid'; break;
+                        case 'Pending': badgeClass = 'badge-pending'; break;
+                    }
+                    return '<span class="badge ' + badgeClass + '">' + data + '</span>';
+                },
+                orderable: false,
+                searchable: false
+            },
+            { 
+                data: 'actions', 
+                name: 'actions', 
+                orderable: false, 
+                searchable: false,
+                className: 'text-center'
+            }
+        ],
+        order: [[1, 'desc']],
+        pageLength: 10,
+        lengthMenu: [10, 20, 50, 100, 200],
+        responsive: true,
+        dom: 'Bfrtip',
+        buttons: [
+            {
+                extend: 'excel',
+                className: 'btn btn-sm btn-success',
+                text: '<i class="fas fa-file-excel"></i> Excel'
+            },
+            {
+                extend: 'csv',
+                className: 'btn btn-sm btn-info',
+                text: '<i class="fas fa-file-csv"></i> CSV'
+            },
+            {
+                extend: 'print',
+                className: 'btn btn-sm btn-secondary',
+                text: '<i class="fas fa-print"></i> Print'
+            }
+        ],
+        language: {
+            search: "Search Invoice:",
+            lengthMenu: "Show _MENU_ entries",
+            info: "Showing _START_ to _END_ of _TOTAL_ invoices",
+            infoEmpty: "Showing 0 to 0 of 0 invoices",
+            infoFiltered: "(filtered from _MAX_ total invoices)"
         }
+    });
+
+    // Reload table when filters change
+    $('#monthsFilter, #paymentStatusFilter').change(function(){
+        table.ajax.reload();
+    });
+
+    // Update PDF export link when filters change
+    function updateExportLink() {
+        const months = $('#monthsFilter').val();
+        const status = $('#paymentStatusFilter').val();
+        let url = "{{ url('/admin/invoices/download-all') }}?months=" + months;
+        
+        if (status && status !== 'all') {
+            url += '&payment_status=' + status;
+        }
+        
+        $('#exportPdfBtn').attr('href', url);
     }
 
-    function renderTable(data) {
-        const filter = filterStatus.value.toLowerCase();
-        const search = searchInput.value.toLowerCase();
-
-        const filtered = data.filter(inv => {
-            const matchStatus = filter === 'all' || (inv.status || '').toLowerCase() === filter;
-            const matchSearch = (inv.customer || '').toLowerCase().includes(search) || (inv.user || '')
-                .toLowerCase().includes(search);
-            return matchStatus && matchSearch;
-        });
-
-        invoiceBody.innerHTML = '';
-        filtered.forEach(inv => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${inv.id}</td>
-                <td>${inv.user}</td>
-                <td>${inv.customer}</td>
-                <td>${inv.subtotal}</td>
-                <td>${inv.tax_rate}</td>
-                <td>${inv.tax_amount}</td>
-                <td>${inv.discount}</td>
-                <td>${inv.total_amount}</td>
-                <td>${inv.profit}</td>
-                <td>${inv.status}</td>
-                <td>${inv.date}</td>
-                <td><a href="/admin/invoices/view/${inv.id}" class="btn-view">View</a></td>
-            `;
-            invoiceBody.appendChild(row);
-        });
-    }
-
-    function updateSummary(data) {
-        totalInv.textContent = data.length;
-        paidInv.textContent = data.filter(d => d.status === 'Paid').length;
-        pendingInv.textContent = data.filter(d => d.status === 'Pending').length;
-        unpaidInv.textContent = data.filter(d => d.status === 'Unpaid').length;
-    }
-
-    filterStatus.addEventListener('change', fetchInvoices);
-    searchInput.addEventListener('input', fetchInvoices);
-
-    fetchInvoices();
+    // Initialize export link
+    updateExportLink();
+    
+    // Update export link when filters change
+    $('#monthsFilter, #paymentStatusFilter').change(function(){
+        updateExportLink();
+    });
 });
 </script>
 @endpush

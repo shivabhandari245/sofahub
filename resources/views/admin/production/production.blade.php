@@ -345,6 +345,10 @@
                     <!-- Will be loaded via AJAX -->
                 </tbody>
             </table>
+            <div class="pagination-container mt-3 text-center">
+                <ul id="batchPagination" class="pagination justify-content-center"></ul>
+            </div>
+
         </div>
     </div>
 

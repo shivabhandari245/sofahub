@@ -37,26 +37,26 @@
             </div>
         </div>
     </div>
+<!-- productlist -->
+<div class="card">
+    <div class="search-filter">
+        <input type="text" id="searchProducts" placeholder="Search products..." />
+        <select id="filterStatus">
+            <option value="all">All Status</option>
+            <option value="Available">Available</option>
+            <option value="Low">Low Stock</option>
+            <option value="Out of Stock">Out of Stock</option>
+        </select>
+        <select id="filterSource">
+            <option value="all">All Sources</option>
+            <option value="admin">From Admin</option>
+            <option value="purchase">Purchased</option>
+        </select>
+    </div>
 
-    <!-- Products List -->
-    <div class="card">
-        <div class="search-filter">
-            <input type="text" id="searchProducts" placeholder="Search products..." />
-            <select id="filterStatus">
-                <option value="all">All Status</option>
-                <option value="Available">Available</option>
-                <option value="Low">Low Stock</option>
-                <option value="Out of Stock">Out of Stock</option>
-            </select>
-            <select id="filterSource">
-                <option value="all">All Sources</option>
-                <option value="admin">From Admin</option>
-                <option value="purchased">Purchased</option>
-            </select>
-        </div>
-
-        <table id="productTable">
-            <thead>
+    <div class="table-responsive">
+        <table id="productTable" class="table table-bordered table-hover">
+            <thead class="table-light">
                 <tr>
                     <th>Product</th>
                     <th>Category</th>
@@ -67,14 +67,12 @@
                     <th>ShowRoom</th>
                     <th>Source</th>
                     <th>Status</th>
-
                 </tr>
             </thead>
-            <tbody id="productBody">
-                <!-- Products will be loaded here -->
-            </tbody>
         </table>
     </div>
+</div>
+
 </div>
 @endsection
 

@@ -29,13 +29,14 @@ public function index(Request $request)
     try {
         $search = $request->input('search');
         $status = $request->input('status');
+        $perPage = $request->input('per_page', 10); // default 10 per page
 
-        //  STEP 1: Auto mark delayed batches in DB
+        // STEP 1: Auto mark delayed batches in DB
         BatchModel::where('status', 'Pending')
-            ->whereDate('expected_completion', '<', Carbon::today())
+            ->whereDate('expected_completion', '<', now())
             ->update(['status' => 'Delayed']);
 
-        //  STEP 2: Base query (include Delayed)
+        // STEP 2: Base query
         $query = BatchModel::with(['product.category', 'product.quality'])
             ->whereIn('status', ['Pending', 'Delayed', 'In Progress']);
 
@@ -49,26 +50,33 @@ public function index(Request $request)
             });
         }
 
-        //  Optional status filter from dropdown
-    // Optional status filter from dropdown
-if ($status && $status !== 'all') {
-    $query->where('status', $status);
-}
-
-
-        // ⚡ AJAX response
-        if ($request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'batches' => $query->latest()->get(),
-                'summary' => [
-                    'totalBatches'   => BatchModel::count(),
-                    'savedProducts'  => BatchProductModel::count(), // 🔹 Added
-                    'pending'        => BatchModel::where('status', 'Pending')->count(),
-                    'delayed'        => BatchModel::where('status', 'Delayed')->count(),
-                ]
-            ]);
+        // Optional status filter from dropdown
+        if ($status && $status !== 'all') {
+            $query->where('status', $status);
         }
+
+        // ⚡ AJAX response with pagination
+            if ($request->ajax()) {
+                $batches = $query->latest()->paginate($perPage);
+
+                return response()->json([
+                    'success' => true,
+                    'batches' => $batches->items(), // only the actual batch array
+                    'pagination' => [
+                        'current_page' => $batches->currentPage(),
+                        'last_page' => $batches->lastPage(),
+                        'per_page' => $batches->perPage(),
+                        'total' => $batches->total(),
+                    ],
+                    'summary' => [
+                        'totalBatches'   => BatchModel::count(),
+                        'savedProducts'  => BatchProductModel::count(),
+                        'pending'        => BatchModel::where('status', 'Pending')->count(),
+                        'delayed'        => BatchModel::where('status', 'Delayed')->count(),
+                    ]
+                ]);
+            }
+
 
         // 🧾 Page load data
         $batchproducts = BatchProductModel::latest()->get();
@@ -85,6 +93,7 @@ if ($status && $status !== 'all') {
         abort(500);
     }
 }
+
 
 
 
@@ -476,17 +485,29 @@ public function completeBatch(Request $request, $id)
 public function getBatchData($batchId): JsonResponse
 {
     try {
-        $batch = BatchModel::with(['product', 'product.category', 'product.quality'])->findOrFail($batchId);
+        // Only load necessary columns and eager load minimal data
+$batch = BatchModel::select(
+    'id',
+    'batchproduct_id',
+    'leader_name',
+    'quantity',
+    'start_date',
+    'expected_completion',
+    'labor_cost',
+    'other_expenses',
+    'status'
+)->findOrFail($batchId);
 
+
+
+        // Aggregate allocated quantities directly in DB
         $allocatedQuantities = DispatchModel::where('batch_id', $batchId)
-            ->select('user_id', DB::raw('SUM(quantity) as allocated_quantity'))
             ->groupBy('user_id')
-            ->get()
-            ->mapWithKeys(function ($item) {
-                return [$item->user_id => (int)$item->allocated_quantity];
-            });
+            ->select('user_id', DB::raw('SUM(quantity) as allocated_quantity'))
+            ->pluck('allocated_quantity', 'user_id')
+            ->map(fn($q) => (int)$q);
 
-        // FIXED: Get only users having "user" role
+        // Only needed user fields
         $users = User::role('user')
             ->select('id', 'name', 'email')
             ->orderBy('name', 'asc')
@@ -498,6 +519,7 @@ public function getBatchData($batchId): JsonResponse
             'users' => $users,
             'allocated' => $allocatedQuantities
         ]);
+
     } catch (\Throwable $e) {
         Log::error('BatchController@getBatchData failed: ' . $e->getMessage(), [
             'exception' => $e,
@@ -506,7 +528,7 @@ public function getBatchData($batchId): JsonResponse
 
         return response()->json([
             'success' => false,
-            'message' => 'Error fetching batch data: ' . $e->getMessage()
+            'message' => 'Error fetching batch data'
         ], 500);
     }
 }

@@ -230,57 +230,14 @@
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody id="materialBody">
-                @foreach($materials as $material)
-                <tr data-category="{{ $material->category_id }}" data-quantity="{{ $material->quantity }}"
-                    data-material='@json($material)'>
-                    <td>{{ $loop->iteration }}</td>
-                    <td>{{ $material->name }}</td>
-                    <td>
-                        <span class="badge badge-category">{{ $material->category->name ?? 'N/A' }}</span>
-                    </td>
-                    <td>{{ $material->supplier->name ?? 'N/A' }}</td>
-                    <td>
-                        <span class="quantity-display {{ $material->quantity < 50 ? 'low-stock' : '' }}">
-                            {{ $material->quantity }}
-                        </span>
-                    </td>
-                    <td>{{ $material->unit->name ?? 'N/A' }}</td>
-                    <td>Rs. {{ number_format($material->unit_cost, 2) }}</td>
-                    <td>Rs. {{ number_format($material->total_cost, 2) }}</td>
-                    <td>{{ $material->storage_location ?? 'N/A' }}</td>
-                    <td>
-                        <div class="action-buttons">
-                            <button type="button" class="btn-action btn-edit" title="Edit Material"
-                                data-id="{{ $material->id }}" data-material='@json($material)'>
-                                <i class="bi bi-pencil-square"></i>
-                            </button>
+<tbody id="materialBody"></tbody>
 
-                            <!-- View Button -->
-                            <button type="button" class="btn-action btn-view" title="View History"
-                                onclick="window.location='{{ url('/admin/viewmaterialhistory/'.$material->id) }}'">
-                                <i class="bi bi-eye"></i>
-                            </button>
 
-                            <!-- Delete Button -->
-                            <form action="{{ url('/admin/deleterawmaterials/' . $material->id) }}" method="POST"
-                                class="d-inline delete-form">
-                                @csrf
-                                @method('DELETE')
-                                <button type="button" class="btn-action btn-delete" title="Delete"
-                                    data-id="{{ $material->id }}" data-name="{{ $material->name }}">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                @endforeach
-            </tbody>
+
         </table>
-        <div class="pagination-wrapper">
-            <ul class="pagination" id="pagination"></ul>
-        </div>
+        <div class="mt-4 d-flex justify-content-center">
+    <div id="pagination"></div>
+</div>
 
     </div>
 </div>

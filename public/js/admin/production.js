@@ -15,12 +15,109 @@ $(document).ready(function() {
 
 
 const ProductionManager = {
+
+     currentPage: 1,
+    perPage: 10,
 init: function() {
     this.loadBatches();
     this.loadDropdownData();
     this.setupEventListeners();
     this.initializeDatePickers();
 
+},
+  renderBatches: function(bag) {
+    const batches = bag.data || bag; // support full paginated object
+    const html = batches.length > 0 ? 
+        batches.map((batch, index) => this.batchRowTemplate(batch, index)).join('') :
+        this.emptyStateTemplate('No batches found', 'bi-inbox');
+    
+    $('#batchBody').html(html);
+
+    // Render pagination if paginated data
+    if (bag.current_page !== undefined) {
+        this.renderPagination(bag);
+    }
+},
+
+renderPagination: function(paginatedData) {
+    const currentPage = paginatedData.current_page || 1;
+    const lastPage = paginatedData.last_page || 1;
+    const $pagination = $('#batchPagination');
+    
+    $pagination.empty();
+
+    if (lastPage <= 1) return; // No pagination needed
+
+    // Create pagination HTML
+    let paginationHtml = '';
+
+    // Previous button
+    paginationHtml += `
+        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" data-page="${currentPage - 1}">&laquo; Previous</a>
+        </li>
+    `;
+
+    // Page numbers
+    const maxVisible = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let endPage = Math.min(lastPage, startPage + maxVisible - 1);
+    
+    // Adjust start if we're near the end
+    if (endPage - startPage + 1 < maxVisible) {
+        startPage = Math.max(1, endPage - maxVisible + 1);
+    }
+
+    // First page and ellipsis
+    if (startPage > 1) {
+        paginationHtml += `
+            <li class="page-item">
+                <a class="page-link" href="#" data-page="1">1</a>
+            </li>
+        `;
+        if (startPage > 2) {
+            paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+    }
+
+    // Page numbers
+    for (let i = startPage; i <= endPage; i++) {
+        paginationHtml += `
+            <li class="page-item ${i === currentPage ? 'active' : ''}">
+                <a class="page-link" href="#" data-page="${i}">${i}</a>
+            </li>
+        `;
+    }
+
+    // Last page and ellipsis
+    if (endPage < lastPage) {
+        if (endPage < lastPage - 1) {
+            paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+        paginationHtml += `
+            <li class="page-item">
+                <a class="page-link" href="#" data-page="${lastPage}">${lastPage}</a>
+            </li>
+        `;
+    }
+
+    // Next button
+    paginationHtml += `
+        <li class="page-item ${currentPage === lastPage ? 'disabled' : ''}">
+            <a class="page-link" href="#" data-page="${currentPage + 1}">Next &raquo;</a>
+        </li>
+    `;
+
+    $pagination.html(paginationHtml);
+
+    // Bind click events
+    $pagination.find('a.page-link').off('click').on('click', (e) => {
+        e.preventDefault();
+        const page = $(e.currentTarget).data('page');
+        if (page && page > 0 && page <= lastPage && page !== currentPage) {
+            this.loadBatches(page);
+        }
+    });
 },
 
 
@@ -142,28 +239,42 @@ completeBatchWithCost: function(e) {
         $('#expected_completion').attr('min', today);
     },
 
-loadBatches: function() {
+loadBatches: function(page = 1) {
     const search = $('#searchInput').val();
     const status = $('#filterStatus').val();
+    const perPage = 10;
 
     this.showLoader('#batchBody');
 
-    // Send null for 'all' to backend
     const statusParam = status === 'all' ? '' : status;
 
     $.ajax({
         url: '/admin/production',
         method: 'GET',
-        data: { search, status: statusParam, ajax: true },
-        success: (response) => {
-            if (response.batches) {
-                this.renderBatches(response.batches); // ✅ just render what backend gives
+        data: { search, status: statusParam, page, per_page: perPage, ajax: true },
+success: (response) => {
+    if (response.success) {
 
-                if (response.summary) {
-                    this.updateSummaryCounts(response.summary);
-                }
-            }
-        },
+        // 🔥 SET pagination state HERE
+        this.currentPage = response.pagination.current_page;
+        this.perPage = response.pagination.per_page;
+
+        const paginatedData = {
+            current_page: response.pagination.current_page,
+            last_page: response.pagination.last_page,
+            per_page: response.pagination.per_page,
+            total: response.pagination.total,
+            data: response.batches
+        };
+
+        this.renderBatches(paginatedData);
+
+        if (response.summary) {
+            this.updateSummaryCounts(response.summary);
+        }
+    }
+},
+
         error: () => this.showError('#batchBody', 'Failed to load data')
     });
 },
@@ -172,27 +283,43 @@ loadBatches: function() {
 
 
 
-    renderBatches: function(batches) {
-        const html = batches.length > 0 ? 
-            batches.map((batch, index) => this.batchRowTemplate(batch, index)).join('') :
-            this.emptyStateTemplate('No batches found', 'bi-inbox');
-        
-        $('#batchBody').html(html);
-    },
+renderBatches: function(paginatedData) {
+    const batches = paginatedData.data || paginatedData.batches || paginatedData;
+    
+    // Check if we have data
+    if (!batches || batches.length === 0) {
+        $('#batchBody').html(this.emptyStateTemplate('No batches found', 'bi-inbox'));
+        $('#batchPagination').empty(); // Clear pagination
+        return;
+    }
+    
+    // Render table rows
+    const html = batches.map((batch, index) => this.batchRowTemplate(batch, index)).join('');
+    $('#batchBody').html(html);
+
+    // Render pagination if we have pagination metadata
+    if (paginatedData.current_page !== undefined) {
+        this.renderPagination(paginatedData);
+    } else if (paginatedData.pagination) {
+        // Handle if pagination data is in a different format
+        this.renderPagination(paginatedData.pagination);
+    }
+},
 
 batchRowTemplate: function(batch, index) {
-    const status = batch.status; // 🔥 from DB
+    const status = batch.status;
     const statusClass = status.toLowerCase().replace(/\s+/g, '-');
 
     const startDate = this.formatDate(batch.start_date);
     const completionDate = this.formatDate(batch.expected_completion);
 
-    // Editable for Pending & Delayed
     const isEditable = status === 'Pending' || status === 'Delayed';
+
+    const sn = (this.currentPage - 1) * this.perPage + index + 1;
 
     return `
         <tr data-batch-id="${batch.id}">
-            <td>${index + 1}</td>
+            <td>${sn}</td>
             <td>${batch.product?.name || 'N/A'}</td>
             <td>${batch.product?.category?.name || 'N/A'}</td>
             <td>${batch.product?.quality?.name || 'N/A'}</td>
@@ -505,68 +632,119 @@ updateSummaryCounts: function(summary) {
         modal.find('.tab-btn').last().addClass('active');
     },
 
-    submitBatchForm: function(e) {
-        e.preventDefault();
-        const form = $('#batchForm');
-        const method = $('#formMethod').val();
-        const batchId = $('#batch_id').val();
-        let url = '/admin/addbatches';
-        let httpMethod = 'POST';
-        
-        if (method === 'POST' && batchId) {
-            url = `/admin/updatebatches/${batchId}`;
-            httpMethod = 'POST';
-        }
-        
-        const formData = form.serialize();
-        const submitBtn = $('#submitBtn');
-        const originalText = submitBtn.html();
-        
-        submitBtn.prop('disabled', true)
-            .html('<span class="spinner-border spinner-border-sm"></span> Processing...');
-        
-        $.ajax({
-            url: url,
-            method: httpMethod,
-            data: formData,
-            headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
-            success: (response) => {
-                if (response.success) {
-                    ModalManager.close('batchModal');
-                    this.loadBatches();
-                    this.showSuccessToast(response.message || 'Batch saved successfully!');
-                } else {
-                    this.showDetailedError(response.message || 'Failed to save batch');
-                }
-                submitBtn.prop('disabled', false).html(originalText);
-            },
-            error: (xhr) => {
-                let errorMessage = 'An error occurred while processing your request.';
-                
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-                }
-                
-                this.showDetailedError(errorMessage);
-                submitBtn.prop('disabled', false).html(originalText);
+submitBatchForm: function(e) {
+    e.preventDefault();
+    const form = $('#batchForm');
+    const batchId = $('#batch_id').val();
+    
+    // Always use POST method for Laravel
+    let url = '/admin/addbatches';
+    let httpMethod = 'POST';
+    
+    // If we have a batchId, we're updating
+    if (batchId) {
+        url = `/admin/updatebatches/${batchId}`;
+        httpMethod = 'POST';  // Keep as POST
+    }
+    
+    const formData = form.serialize();
+    const submitBtn = $('#submitBtn');
+    const originalText = submitBtn.html();
+    
+    submitBtn.prop('disabled', true)
+        .html('<span class="spinner-border spinner-border-sm"></span> Processing...');
+    
+    $.ajax({
+        url: url,
+        method: httpMethod,
+        data: formData,
+        headers: { 
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+            'Accept': 'application/json'
+        },
+        success: (response) => {
+            if (response.success) {
+                ModalManager.close('batchModal');
+                this.loadBatches();
+                this.showSuccessToast(response.message || 'Batch saved successfully!');
+            } else {
+                this.showDetailedError(response.message || 'Failed to save batch');
             }
-        });
-    },
+            submitBtn.prop('disabled', false).html(originalText);
+        },
+        error: (xhr) => {
+            let errorMessage = 'An error occurred while processing your request.';
+            
+            if (xhr.responseJSON) {
+                if (xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.responseJSON.errors) {
+                    const errors = xhr.responseJSON.errors;
+                    errorMessage = Object.values(errors).flat().join(', ');
+                }
+            }
+            
+            this.showDetailedError(errorMessage);
+            submitBtn.prop('disabled', false).html(originalText);
+        }
+    });
+},
+
 
 editBatch: function(batchId) {
-    $.get(`/admin/batches/${batchId}`, (batch) => {
-        $('#batch_id').val(batch.id);
-        $('#batchproduct_id').val(batch.batchproduct_id);
-        $('#productcategory_id').val(batch.productcategory_id);
-        $('#productquality_id').val(batch.productquality_id);
-        $('#leader_name').val(batch.leader_name);
-        $('#quantity').val(batch.quantity);
-        $('#start_date').val(batch.start_date.split('T')[0]);
-        $('#expected_completion').val(batch.expected_completion.split('T')[0]);
-
-        $('#modalTitle').text('Edit Batch');
-        $('#submitBtn').text('Update Batch');
-        ModalManager.open('batchModal');
+    console.log('Edit batch clicked, ID:', batchId); // Debug log
+    
+    $.ajax({
+        url: `/admin/batch-data/${batchId}`,
+        method: 'GET',
+        dataType: 'json',
+        success: (response) => {
+            console.log('Batch data response:', response); // Debug log
+            
+            if (response.success && response.batch) {
+                const batch = response.batch;
+                console.log('Batch data loaded:', batch); // Debug log
+                
+                // Fill form fields
+                $('#batch_id').val(batch.id);
+                $('#batchproduct_id').val(batch.batchproduct_id);
+                $('#leader_name').val(batch.leader_name);
+                $('#quantity').val(batch.quantity);
+                
+                // Format dates
+                if (batch.start_date) {
+                    $('#start_date').val(batch.start_date.split('T')[0]);
+                }
+                if (batch.expected_completion) {
+                    $('#expected_completion').val(batch.expected_completion.split('T')[0]);
+                }
+                
+                // Update modal title and button
+                $('#modalTitle').text('Edit Batch');
+                $('#submitBtn').text('Update Batch');
+                $('#formMethod').val('PUT');
+                
+                // Open modal
+                ModalManager.open('batchModal');
+            } else {
+                console.error('Failed to load batch data:', response);
+                this.showErrorToast(response.message || 'Failed to load batch data');
+            }
+        },
+        error: (xhr, status, error) => {
+            console.error('AJAX error:', {
+                status: xhr.status,
+                statusText: xhr.statusText,
+                responseText: xhr.responseText,
+                error: error
+            });
+            
+            let errorMessage = 'Failed to load batch data';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                errorMessage = xhr.responseJSON.message;
+            }
+            this.showErrorToast(errorMessage);
+        }
     });
 },
 

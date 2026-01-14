@@ -20,7 +20,32 @@ class RawMaterialsManager {
         this.currentMaterial = null;
         
         this.init();
+
+        this.currentPage = 1;
+        this.perPage = 10;
+        this.loadMaterials();
     }
+
+    loadMaterials(page = 1) {
+    this.currentPage = page;
+
+    $.ajax({
+        url: '/admin/rawmaterials',
+        data: {
+            page: page,
+            per_page: this.perPage,
+            search: $('#searchInput').val(),
+            category: $('#filterCategory').val()
+        },
+        success: (res) => {
+            this.renderTable(res.data);
+            this.renderPagination(res.pagination);
+        },
+        error: () => {
+            Swal.fire('Error', 'Failed to load materials', 'error');
+        }
+    });
+}
 
     init() {
         this.setupEventListeners();
@@ -290,9 +315,12 @@ class RawMaterialsManager {
                     icon: 'success',
                     title: 'Material restocked successfully!'
                 });
+
                 this.closeRestockModal();
-                setTimeout(() => location.reload(), 1500);
-            } else {
+                this.loadMaterials(this.currentPage);
+            }
+
+            else {
                 let errorMessage = data.message || 'Failed to restock material';
                 if (data.errors) {
                     errorMessage = Object.values(data.errors).join(', ');
@@ -336,6 +364,93 @@ class RawMaterialsManager {
         return isValid;
     }
 
+renderTable(materials) {
+    let html = '';
+    const currentPage = this.currentPage;
+    const perPage = this.perPage;
+
+    if (!materials.length) {
+        html = `<tr><td colspan="10" class="text-center text-muted">No materials found</td></tr>`;
+    }
+
+    materials.forEach((material, index) => {
+        const sn = (currentPage - 1) * perPage + index + 1;
+
+        html += `
+        <tr>
+          
+            <td>${sn}</td>
+
+            <td>${material.name}</td>
+            <td>${material.category?.name ?? 'N/A'}</td>
+            <td>${material.supplier?.name ?? 'N/A'}</td>
+            <td>${material.quantity}</td>
+            <td>${material.unit?.name ?? 'N/A'}</td>
+            <td>Rs. ${material.unit_cost}</td>
+            <td>Rs. ${material.total_cost}</td>
+            <td>${material.storage_location ?? 'N/A'}</td>
+
+            <td>
+                <div class="action-buttons">
+
+                    <!-- ✏️ Edit -->
+                    <button type="button"
+                        class="btn-action btn-edit"
+                        title="Edit Material"
+                        data-id="${material.id}"
+                        data-material='${JSON.stringify(material)}'>
+                        <i class="bi bi-pencil-square"></i>
+                    </button>
+
+                    <!-- 👁 View -->
+                    <button type="button"
+                        class="btn-action btn-view"
+                        title="View History"
+                        onclick="window.location='/admin/viewmaterialhistory/${material.id}'">
+                        <i class="bi bi-eye"></i>
+                    </button>
+
+                    <!-- 🗑 Delete -->
+                    <form action="/admin/deleterawmaterials/${material.id}"
+                          method="POST"
+                          class="d-inline delete-form">
+
+                        <input type="hidden" name="_token"
+                               value="${$('meta[name=csrf-token]').attr('content')}">
+                        <input type="hidden" name="_method" value="DELETE">
+
+                        <button type="button"
+                            class="btn-action btn-delete"
+                            title="Delete"
+                            data-id="${material.id}"
+                            data-name="${material.name}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+
+                </div>
+            </td>
+        </tr>`;
+    });
+
+    $('#materialBody').html(html);
+}
+
+ renderPagination(pagination) {
+    let html = '';
+
+    for (let i = 1; i <= pagination.last_page; i++) {
+        html += `
+        <button class="btn btn-sm ${i === pagination.current_page ? 'btn-primary' : 'btn-outline-primary'}"
+            data-page="${i}">
+            ${i}
+        </button>`;
+    }
+
+    $('#pagination').html(html);
+}
+
+
     showRestockFieldError(fieldId, message) {
         const field = $(`#${fieldId}`);
         field.addClass('is-invalid');
@@ -343,20 +458,11 @@ class RawMaterialsManager {
     }
 
     setupTableFiltering() {
-        const rows = $('#materialBody tr');
         $('#searchInput, #filterCategory').on('input change', () => {
-            const searchTerm = $('#searchInput').val().toLowerCase();
-            const categoryFilter = $('#filterCategory').val();
-            
-            rows.each(function () {
-                const text = $(this).text().toLowerCase();
-                const rowCat = $(this).data('category');
-                const matchSearch = text.includes(searchTerm);
-                const matchCat = categoryFilter === 'all' || rowCat == categoryFilter;
-                $(this).toggle(matchSearch && matchCat);
-            });
+            this.loadMaterials(1);
         });
     }
+
 
     setupValidation() {
         $('input, select').on('blur', (e) => {
@@ -457,9 +563,13 @@ class RawMaterialsManager {
                     icon: 'success',
                     title: this.isEditMode ? 'Material updated successfully!' : 'Material added successfully!'
                 });
+
                 this.closeMaterialModal();
-                setTimeout(() => location.reload(), 1500);
-            } else {
+                this.loadMaterials(this.currentPage);
+            }
+
+
+             else {
                 let errorMessage = data.message || 'Unknown error occurred';
                 if (data.errors) {
                     errorMessage = Object.values(data.errors).join(', ');
@@ -545,7 +655,8 @@ class RawMaterialsManager {
                                 icon: 'success', 
                                 title: 'Material deleted successfully!' 
                             });
-                            setTimeout(() => location.reload(), 1500);
+                           this.loadMaterials(this.currentPage);
+
                         } else {
                             Swal.fire({ 
                                 icon: 'error', 
@@ -725,69 +836,8 @@ document.addEventListener('DOMContentLoaded', function() {
         window.rawMaterialsManager = new RawMaterialsManager();
     }
 });
-document.addEventListener("DOMContentLoaded", function () {
 
-    const rowsPerPage = 10;
-    const tableBody = document.getElementById("materialBody");
-    const rows = Array.from(tableBody.querySelectorAll("tr"));
-    const pagination = document.getElementById("pagination");
-
-    let currentPage = 1;
-
-    function renderTable() {
-        const start = (currentPage - 1) * rowsPerPage;
-        const end = start + rowsPerPage;
-
-        rows.forEach((row, index) => {
-            row.style.display = (index >= start && index < end) ? "" : "none";
-        });
-    }
-
-    function renderPagination() {
-        pagination.innerHTML = "";
-        const pageCount = Math.ceil(rows.length / rowsPerPage);
-
-        // Prev
-        const prev = document.createElement("li");
-        prev.innerText = "«";
-        prev.classList.toggle("disabled", currentPage === 1);
-        prev.onclick = () => {
-            if (currentPage > 1) {
-                currentPage--;
-                update();
-            }
-        };
-        pagination.appendChild(prev);
-
-        // Pages
-        for (let i = 1; i <= pageCount; i++) {
-            const li = document.createElement("li");
-            li.innerText = i;
-            if (i === currentPage) li.classList.add("active");
-            li.onclick = () => {
-                currentPage = i;
-                update();
-            };
-            pagination.appendChild(li);
-        }
-
-        // Next
-        const next = document.createElement("li");
-        next.innerText = "»";
-        next.classList.toggle("disabled", currentPage === pageCount);
-        next.onclick = () => {
-            if (currentPage < pageCount) {
-                currentPage++;
-                update();
-            }
-        };
-        pagination.appendChild(next);
-    }
-
-    function update() {
-        renderTable();
-        renderPagination();
-    }
-
-    update();
+$(document).on('click', '#pagination button', function () {
+    const page = $(this).data('page');
+    window.rawMaterialsManager.loadMaterials(page);
 });

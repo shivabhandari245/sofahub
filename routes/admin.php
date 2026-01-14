@@ -53,7 +53,7 @@ Route::prefix('admin')->middleware(['auth', RoleMiddleware::using('admin')])->gr
     Route::post('/addrawmaterials', [RawMaterialController::class, 'insert']);
     Route::get('/updaterawmaterials/{id}', [RawMaterialController::class, 'edit']);
     Route::put('/updaterawmaterials/{id}', [RawMaterialController::class, 'update']);
-    Route::get('/deleterawmaterials/{id}', [RawMaterialController::class, 'destroy']);
+    Route::delete('/deleterawmaterials/{id}', [RawMaterialController::class, 'destroy']);
     Route::post('/restock-material/{id}', [RawMaterialController::class, 'restock']);
     Route::get('/viewmaterialhistory/{id}', [RawMaterialController::class, 'view']);
     Route::get('/rawmaterials/{id}/export-history', [RawMaterialController::class, 'exportHistory'])
@@ -75,15 +75,7 @@ Route::delete('/deletesupplier/{id}', [RawMaterialCategoryController::class, 'de
 Route::delete('/deleteunit/{id}', [RawMaterialCategoryController::class, 'deleteunit']);
 
     // Production Batch CRUD
-    Route::post('/addbatches', [BatchController::class, 'insert']);
-    Route::get('/updatebatches/{id}', [BatchController::class, 'edit']);
-    Route::put('/updatebatches/{id}', [BatchController::class, 'update']);
-    Route::post('/completebatch/{batch_id}', [BatchController::class, 'completebatch']);    
-    Route::post('/distribute', [BatchController::class, 'distribute']);
-    Route::get('/allocated-quantity/{batchId}', [BatchController::class, 'getAllocatedQuantity']);
-    Route::get('/viewcompletedbatches', [BatchController::class, 'viewcompletebatches']);
-    
-
+   
 
     // Production Materials
     Route::get('/selectbatch/{id}', [ProductionMaterialController::class, 'index']);
@@ -101,11 +93,15 @@ Route::delete('/deleteunit/{id}', [RawMaterialCategoryController::class, 'delete
      Route::get('/dispatchcompleted', [AdminDispatchController::class, 'completed']);
 
 //admin invoices routes
-Route::get('/invoices', [AdminInvoicesController::class, 'index']);
-Route::get('/allinvoices', [AdminInvoicesController::class, 'getSalesData']);
-Route::get('/invoices/view/{sale}', [AdminInvoicesController::class, 'show'])
-        ->name('admin.invoices.view');
 
+
+Route::prefix('invoices')->group(function () {
+Route::get('/invoice', [AdminInvoicesController::class, 'index']);    
+Route::get('/allinvoices', [AdminInvoicesController::class, 'getSalesData']);
+Route::get('/download-all', [AdminInvoicesController::class, 'downloadAll']);
+Route::get('/{sale}', [AdminInvoicesController::class, 'show']);
+Route::get('/{sale}/download', [AdminInvoicesController::class, 'download']);
+});
 
     //product
      Route::get('/productlist', [ProductController::class, 'list']);
@@ -141,13 +137,15 @@ Route::prefix('admin')->middleware(['auth', RoleMiddleware::using('admin')])->gr
     // Batch routes
     Route::get('/batch-data/{id}', [BatchController::class, 'getBatchData']);
     Route::post('/addbatches', [BatchController::class, 'store']);
-    Route::post('/updatebatches/{id}', [BatchController::class, 'update']);
+    Route::put('/updatebatches/{id}', [BatchController::class, 'update']);
     Route::delete('/deletebatches/{id}', [BatchController::class, 'destroy']);
     Route::post('/completebatch/{id}', [BatchController::class, 'completebatch']);
 
     //completion code
     Route::post('/distributebatch', [BatchController::class, 'distributebatch']);
     Route::get('/allocated-quantity/{batchId}', [BatchController::class, 'getAllocatedQuantity']);
+    Route::get('/viewcompletedbatches', [BatchController::class, 'viewcompletebatches']);
+
   
     
     // Product routes

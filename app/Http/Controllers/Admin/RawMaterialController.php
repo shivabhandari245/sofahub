@@ -15,29 +15,61 @@ use Illuminate\Support\Facades\Auth; // Added this import
 
 class RawMaterialController extends Controller
 {
-    public function index()
-    {
-        try {
-            $materials = RawMaterialModel::with(['category', 'supplier', 'unit'])
-                ->orderBy('created_at', 'desc')
-                ->get();
-            $lowStockCount = RawMaterialModel::where('quantity','<',50)->count();
-            $materialCategories = RawMaterialCategoryModel::orderBy('name', 'asc')->get();
-            $suppliers = SupplierModel::orderBy('name', 'asc')->get();
-            $units = UnitModel::orderBy('name', 'asc')->get();
 
-            return view('admin.rawmaterial.rawmaterials', compact(
-                'materials',
-                'materialCategories',
-                'suppliers',
-                'units',
-                'lowStockCount'
-            ));
-        } catch (\Exception $e) {
-            Log::error('Error loading raw materials page: ' . $e->getMessage());
-            return back()->with('error', 'Failed to load raw materials page.');
+public function index(Request $request)
+{
+    try {
+        $perPage = $request->get('per_page', 10);
+
+        $query = RawMaterialModel::with(['category', 'supplier', 'unit'])
+            ->orderBy('created_at', 'desc');
+
+        // 🔍 Search
+        if ($request->filled('search')) {
+            $query->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhereHas('supplier', function ($q) use ($request) {
+                      $q->where('name', 'like', '%' . $request->search . '%');
+                  });
         }
+
+        // 🏷 Category filter
+        if ($request->filled('category') && $request->category !== 'all') {
+            $query->where('category_id', $request->category);
+        }
+
+        $materials = $query->paginate($perPage);
+
+        $lowStockCount = RawMaterialModel::where('quantity', '<', 50)->count();
+        $materialCategories = RawMaterialCategoryModel::orderBy('name')->get();
+        $suppliers = SupplierModel::orderBy('name')->get();
+        $units = UnitModel::orderBy('name')->get();
+
+        if ($request->ajax()) {
+            return response()->json([
+                'data' => $materials->items(),
+                'pagination' => [
+                    'current_page' => $materials->currentPage(),
+                    'last_page' => $materials->lastPage(),
+                    'total' => $materials->total(),
+                ],
+            ]);
+        }
+
+        return view('admin.rawmaterial.rawmaterials', compact(
+            'materials',
+            'materialCategories',
+            'suppliers',
+            'units',
+            'lowStockCount'
+        ));
+
+    } catch (\Exception $e) {
+        Log::error($e);
+        return back()->with('error', 'Failed to load raw materials.');
     }
+}
+
+
 
     public function insert(Request $request)
     {
