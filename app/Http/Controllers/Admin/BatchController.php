@@ -550,27 +550,36 @@ $batch = BatchModel::select(
 
 public function viewcompletebatches(Request $request)
 {
+    $perPage = 10; // batches per page
+    $page = $request->input('page', 1);
+    $search = $request->input('search');
+
+    $query = BatchModel::with(['product.category', 'product.quality'])
+        ->where('status', 'Completed');
+
+    if ($search) {
+        $query->where(function ($q) use ($search) {
+            $q->where('leader_name', 'LIKE', "%{$search}%")
+              ->orWhereHas('product', fn($p) => $p->where('name', 'LIKE', "%{$search}%"));
+        });
+    }
+
+    $batches = $query->latest()->paginate($perPage);
+
     if ($request->ajax()) {
-        $search = $request->input('search');
-
-        $query = BatchModel::with(['product.category', 'product.quality'])
-            ->where('status', 'Completed');
-
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('leader_name', 'LIKE', "%{$search}%")
-                  ->orWhereHas('product', fn($p) => $p->where('name', 'LIKE', "%{$search}%"));
-            });
-        }
-
         return response()->json([
             'success' => true,
-            'batches' => $query->latest()->get()
+            'batches' => $batches->items(),
+            'current_page' => $batches->currentPage(),
+            'last_page' => $batches->lastPage(),
+            'per_page' => $batches->perPage(),
+            'total' => $batches->total()
         ]);
     }
 
     return view('admin.production.completedbatches');
 }
+
 
 
 

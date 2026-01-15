@@ -17,7 +17,7 @@
     <i class="fas fa-print"></i> Print
 </a>
 
-                <a href="{{ url('admin/invoices/invoice') }}" class="btn btn-primary">
+                <a href="{{ url('admin/invoice') }}" class="btn btn-primary">
                     <i class="fas fa-arrow-left"></i> Back
                 </a>
             </div>

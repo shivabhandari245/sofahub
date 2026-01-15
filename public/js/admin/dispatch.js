@@ -1,9 +1,9 @@
 $(document).ready(function() {
 
     // =========================
-    // Open Distribute Batch Modal
+    // Open Distribute Batch Modal (dynamic rows)
     // =========================
-    $('.sendBtn').click(function() {
+    $(document).on('click', '.sendBtn', function() {
         const button = $(this);
         const dispatchId = button.data('id');
         const quantity = button.data('quantity');
@@ -18,7 +18,7 @@ $(document).ready(function() {
     // =========================
     // Close Modals
     // =========================
-    $('.close-modal').click(function() {
+    $(document).on('click', '.close-modal', function() {
         $(this).closest('.modal').fadeOut();
     });
 
@@ -33,7 +33,6 @@ $(document).ready(function() {
     // =========================
     $('#distributeForm').submit(function(e) {
         e.preventDefault();
-
         const form = $(this);
         const url = form.attr('action');
         const submitBtn = form.find('button[type="submit"]');
@@ -48,13 +47,13 @@ $(document).ready(function() {
             success: function(response) {
                 alert(response.message);
                 $('#distributeModal').fadeOut();
-                location.reload(); // reload page to show updated dispatches
+                loadDispatchTable(currentPage); // reload current AJAX page
             },
             error: function(xhr) {
                 let errorMessage = 'Error distributing batch!';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
+                if (xhr.responseJSON?.message) {
                     errorMessage = xhr.responseJSON.message;
-                } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                } else if (xhr.responseJSON?.errors) {
                     errorMessage = Object.values(xhr.responseJSON.errors).flat().join(', ');
                 }
                 alert(errorMessage);
@@ -68,7 +67,7 @@ $(document).ready(function() {
     // =========================
     // Send Dispatch via AJAX
     // =========================
-    $('.sendBtnTransit').click(function() {
+    $(document).on('click', '.sendBtnTransit', function() {
         const dispatchId = $(this).data('id');
         const driver = prompt("Enter driver name:");
 
@@ -84,10 +83,10 @@ $(document).ready(function() {
             },
             success: function(res) {
                 alert(res.message || 'Dispatch sent successfully!');
-                location.reload();
+                loadDispatchTable(currentPage);
             },
             error: function(err) {
-                alert(err.responseJSON.message || 'Error sending dispatch');
+                alert(err.responseJSON?.message || 'Error sending dispatch');
             }
         });
     });
@@ -95,7 +94,7 @@ $(document).ready(function() {
     // =========================
     // Cancel Dispatch via AJAX
     // =========================
-    $('.cancelBtn').click(function() {
+    $(document).on('click', '.cancelBtn', function() {
         if (!confirm('Are you sure you want to cancel this dispatch?')) return;
 
         const dispatchId = $(this).data('id');
@@ -109,35 +108,94 @@ $(document).ready(function() {
             },
             success: function(res) {
                 alert(res.message);
-                location.reload();
+                loadDispatchTable(currentPage);
             },
             error: function(err) {
-                alert(err.responseJSON.message || 'Error canceling dispatch');
+                alert(err.responseJSON?.message || 'Error canceling dispatch');
             }
         });
     });
 
     // =========================
-    // Filter/Search
+    // Remove client-side filter/search
     // =========================
+    // With AJAX backend, the filtering is done server-side
+    // So just reload table when user changes input
     $('#filterDispatchStatus').change(function() {
-        const status = $(this).val().toLowerCase();
-        $('#dispatchesTable tbody tr').each(function() {
-            const rowStatus = $(this).find('td:nth-child(10)').text().toLowerCase(); // Status column
-            if (status === 'all' || rowStatus === status) {
-                $(this).show();
-            } else {
-                $(this).hide();
-            }
-        });
+        loadDispatchTable(1);
     });
 
     $('#searchDispatches').on('input', function() {
-        const search = $(this).val().toLowerCase();
-        $('#dispatchesTable tbody tr').each(function() {
-            const rowText = $(this).text().toLowerCase();
-            $(this).toggle(rowText.includes(search));
-        });
+        loadDispatchTable(1);
     });
 
 });
+let currentPage = 1;
+
+function loadDispatchTable(page = 1) {
+    currentPage = page;
+
+    $.get('/admin/dispatchtableajax', {
+        page: page,
+        search: $('#searchDispatches').val(),
+        status: $('#filterDispatchStatus').val()
+    }, function(res) {
+        let rows = '';
+        let sn = (res.current_page - 1) * res.per_page + 1;
+
+        if (res.data.length === 0) {
+            rows = `<tr><td colspan="11" class="text-center">No dispatches found</td></tr>`;
+        } else {
+            res.data.forEach(d => {
+                rows += `
+                <tr>
+                    <td>${sn++}</td>
+                    <td>${d.batch?.product?.name ?? '-'}</td>
+                    <td>${d.batch?.product?.category?.name ?? '-'}</td>
+                    <td>${d.batch?.product?.quality?.name ?? '-'}</td>
+                    <td>${d.quantity}</td>
+                    <td>${Number(d.batch?.expected_unit_cost ?? 0).toFixed(2)}</td>
+                    <td>${Number(d.batch?.total_cost ?? 0).toFixed(2)}</td>
+                    <td>${d.user?.name ?? '-'}</td>
+                    <td>${d.driver ?? '-'}</td>
+                    <td>${d.status}</td>
+                    <td>
+                        ${d.status === 'Pending' 
+                            ? `<button class="btn btn-sm btn-success sendBtn" data-id="${d.id}">Send</button>`
+                            : d.status === 'In Transit' 
+                                ? `<button class="btn btn-sm btn-danger cancelBtn" data-id="${d.id}">Cancel</button>`
+                                : '-'}
+                    </td>
+                </tr>`;
+            });
+        }
+
+        $('#dispatchTableBody').html(rows);
+        renderPagination(res.current_page, res.last_page);
+    });
+}
+
+function renderPagination(current, last) {
+    let html = '';
+    if (last <= 1) {
+        $('#pagination').html('');
+        return;
+    }
+
+    html += `<button class="btn btn-sm" ${current === 1 ? 'disabled' : ''} onclick="loadDispatchTable(${current - 1})">Prev</button>`;
+
+    for (let i = 1; i <= last; i++) {
+        html += `<button class="btn btn-sm ${i === current ? 'btn-primary' : ''}" onclick="loadDispatchTable(${i})">${i}</button>`;
+    }
+
+    html += `<button class="btn btn-sm" ${current === last ? 'disabled' : ''} onclick="loadDispatchTable(${current + 1})">Next</button>`;
+
+    $('#pagination').html(html);
+}
+
+// Initial load
+loadDispatchTable();
+
+// Search & filter events
+$('#searchDispatches').on('keyup', () => loadDispatchTable(1));
+$('#filterDispatchStatus').on('change', () => loadDispatchTable(1));

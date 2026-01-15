@@ -59,7 +59,7 @@
                 </a>
             </li>
             <li>
-                <a href="{{ url('admin/invoices/invoice') }}" class="{{ request()->is('admin/invoices/invoice') ? 'active' : '' }}">
+                <a href="{{ url('admin/invoice') }}" class="{{ request()->is('admin/invoice') ? 'active' : '' }}">
                     <i class="fas fa-file-invoice"></i>
                     <span>Invoices</span>
                 </a>

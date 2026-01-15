@@ -215,10 +215,12 @@ public function index(Request $request)
     {
         $material = RawMaterialModel::with(['category', 'supplier', 'unit'])->findOrFail($id);
 
+        $perPage = 10; // change as needed
         $history = MaterialHistoryModel::where('raw_material_id', $id)
                     ->orderBy('created_at', 'desc')
                     ->with('user')
-                    ->get();
+                    ->paginate($perPage);
+
 
         // Calculate statistics
         $totalRestocked = $history->where('type', 'restocked')->sum('quantity_change');

@@ -3,6 +3,11 @@
 @section('title', 'Material History - ' . $material->name)
 
 @section('content')
+
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/admincss/materialhistory.css') }}" />
+
+@endpush
 <div class="container-fluid">
     <!-- Header Section -->
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -253,14 +258,14 @@
                                         <div class="cost-info">
                                             <small class="text-muted d-block">Unit Cost</small>
                                             <div class="font-weight-bold">
-                                                ₹{{ number_format($record->unit_cost, 2) }}
+                                                Rs{{ number_format($record->unit_cost, 2) }}
                                             </div>
                                             @if($record->total_cost_change != 0)
                                             <small class="{{ $record->total_cost_change >= 0 ? 'text-success' : 'text-danger' }}">
                                                 @if($record->total_cost_change >= 0)
-                                                    <i class="fas fa-arrow-up"></i> +₹{{ number_format($record->total_cost_change, 2) }}
+                                                    <i class="fas fa-arrow-up"></i> +Rs{{ number_format($record->total_cost_change, 2) }}
                                                 @else
-                                                    <i class="fas fa-arrow-down"></i> -₹{{ number_format(abs($record->total_cost_change), 2) }}
+                                                    <i class="fas fa-arrow-down"></i> -Rs{{ number_format(abs($record->total_cost_change), 2) }}
                                                 @endif
                                             </small>
                                             @endif
@@ -287,7 +292,10 @@
                     </div>
                     @endforeach
                 </div>
-                
+                <div class="d-flex justify-content-center mt-4">
+                    {{ $history->links('pagination::bootstrap-4') }}
+                </div>
+
                 <!-- Export Options -->
                 <div class="mt-4 pt-3 border-top">
                     <div class="d-flex justify-content-between align-items-center">
@@ -330,7 +338,7 @@
                         <input type="number" name="restock_quantity" class="form-control" min="1" required>
                     </div>
                     <div class="form-group">
-                        <label>New Unit Cost (₹) *</label>
+                        <label>New Unit Cost (Rs) *</label>
                         <input type="number" name="unit_cost" class="form-control" step="0.01" min="0" required>
                     </div>
                     <div class="form-group">
@@ -390,152 +398,7 @@
     </div>
 </div>
 
-@push('styles')
-<style>
-    /* Timeline Layout */
-    .history-timeline {
-        position: relative;
-        padding-left: 60px;
-    }
-    
-    .history-timeline::before {
-        content: '';
-        position: absolute;
-        left: 30px;
-        top: 0;
-        bottom: 0;
-        width: 2px;
-        background: linear-gradient(to bottom, #e3e6f0, #4e73df, #e3e6f0);
-    }
-    
-    .history-item {
-        position: relative;
-        margin-bottom: 15px;
-    }
-    
-    .history-item::before {
-        content: '';
-        position: absolute;
-        left: -40px;
-        top: 30px;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        border: 3px solid #fff;
-        z-index: 1;
-    }
-    
-    .history-item.restocked::before {
-        background-color: #1cc88a;
-        box-shadow: 0 0 0 2px #1cc88a;
-    }
-    
-    .history-item.used::before {
-        background-color: #f6c23e;
-        box-shadow: 0 0 0 2px #f6c23e;
-    }
-    
-    .history-item.initial_stock::before {
-        background-color: #4e73df;
-        box-shadow: 0 0 0 2px #4e73df;
-    }
-    
-    /* Card Styling */
-    .card {
-        border: none;
-        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    
-    .card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0.5rem 2rem 0 rgba(58, 59, 69, 0.2);
-    }
-    
-    .border-left-success {
-        border-left: 4px solid #1cc88a !important;
-    }
-    
-    .border-left-warning {
-        border-left: 4px solid #f6c23e !important;
-    }
-    
-    .border-left-info {
-        border-left: 4px solid #36b9cc !important;
-    }
-    
-    .border-left-primary {
-        border-left: 4px solid #4e73df !important;
-    }
-    
-    /* Badge Styling */
-    .badge-pill {
-        border-radius: 10rem;
-    }
-    
-    /* Timeline Icon */
-    .timeline-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    .history-item.restocked .timeline-icon {
-        background-color: rgba(28, 200, 138, 0.1);
-    }
-    
-    .history-item.used .timeline-icon {
-        background-color: rgba(246, 194, 62, 0.1);
-    }
-    
-    .history-item.initial_stock .timeline-icon {
-        background-color: rgba(78, 115, 223, 0.1);
-    }
-    
-    /* Filter Button Active State */
-    .btn-group .btn.active {
-        background-color: #fff;
-        color: #000;
-    }
-    
-    /* Responsive Design */
-    @media (max-width: 768px) {
-        .history-timeline {
-            padding-left: 40px;
-        }
-        
-        .history-timeline::before {
-            left: 20px;
-        }
-        
-        .history-item::before {
-            left: -30px;
-            width: 15px;
-            height: 15px;
-        }
-        
-        .card-body .row > div {
-            margin-bottom: 10px;
-        }
-        
-        .d-flex.justify-content-between.align-items-center {
-            flex-direction: column;
-            align-items: start !important;
-        }
-        
-        .d-flex.justify-content-between.align-items-center > div {
-            margin-bottom: 10px;
-        }
-        
-        .btn-group {
-            margin-top: 10px;
-        }
-    }
-</style>
-@endpush
+
 
 @push('scripts')
 <script src="{{ asset('js/admin/historymaterial.js') }}?v=1.2"></script>

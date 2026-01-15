@@ -87,21 +87,19 @@ Route::delete('/deleteunit/{id}', [RawMaterialCategoryController::class, 'delete
     Route::post('/confirmbatch/{batch_id}', [UsedMaterialController::class, 'confirmBatch']);
     
     //dispatch routes
+    Route::get('/dispatchtableajax', [AdminDispatchController::class, 'tableDispatches']);
     Route::post('/sendDispatch', [AdminDispatchController::class, 'sendDispatch']);
     Route::post('/distributeBatch', [AdminDispatchController::class, 'distributeBatch']);
     Route::post('/cancelDispatch', [AdminDispatchController::class, 'cancelDispatch']);
      Route::get('/dispatchcompleted', [AdminDispatchController::class, 'completed']);
+     Route::get('/completedDispatchesajax', [AdminDispatchController::class, 'ajaxCompletedDispatches']);
 
 //admin invoices routes
-
-
-Route::prefix('invoices')->group(function () {
 Route::get('/invoice', [AdminInvoicesController::class, 'index']);    
 Route::get('/allinvoices', [AdminInvoicesController::class, 'getSalesData']);
 Route::get('/download-all', [AdminInvoicesController::class, 'downloadAll']);
-Route::get('/{sale}', [AdminInvoicesController::class, 'show']);
-Route::get('/{sale}/download', [AdminInvoicesController::class, 'download']);
-});
+Route::get('/viewinvoice/{id}', [AdminInvoicesController::class, 'view'])->name('admin.invoices.show');
+
 
     //product
      Route::get('/productlist', [ProductController::class, 'list']);

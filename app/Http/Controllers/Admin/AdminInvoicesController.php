@@ -9,7 +9,6 @@ use Yajra\DataTables\Facades\DataTables;
 
 class AdminInvoicesController extends Controller
 {
-    // Show main invoices page (GET /admin/invoices/invoices)
     public function index(Request $request)
     {
         $months = $request->get('months', 1);
@@ -60,7 +59,6 @@ class AdminInvoicesController extends Controller
         ));
     }
 
-    // Return sales data for DataTables (GET /admin/invoices/allinvoices)
     public function getSalesData(Request $request)
     {
         $months = $request->get('months', 1);
@@ -87,11 +85,11 @@ class AdminInvoicesController extends Controller
             ->addColumn('actions', function($sale) {
                 return '
                     <div class="action-btns">
-                        <a href="'.url("/admin/invoices/{$sale->id}").'" 
-                           class="btn btn-sm btn-primary" title="View Details">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        <a href="'.url("/admin/invoices/{$sale->id}/download").'" 
+                        <a href="'.route('admin.invoices.show', $sale->id).'" 
+                            class="btn btn-sm btn-primary" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        <a href="'.url("/admin/{$sale->id}/download").'" 
                            class="btn btn-sm btn-danger" title="Download PDF">
                             <i class="fas fa-file-pdf"></i>
                         </a>
@@ -114,8 +112,7 @@ class AdminInvoicesController extends Controller
             ->make(true);
     }
 
-    // Export all invoices as PDF (GET /admin/invoices/download-all)
-// Export all invoices as PDF (GET /admin/invoices/download-all)
+
 public function downloadAll(Request $request)
 {
     $months = $request->get('months', 1);
@@ -136,14 +133,15 @@ public function downloadAll(Request $request)
     return view('admin.invoice.exportpdf', compact('invoices', 'months'));
 }
 
-    // Admin invoice detail page (GET /admin/invoices/{sale})
-    public function show(Sale $sale)
-    {
-        $sale->load(['items.product', 'customer', 'user']);
-        return view('admin.invoice.viewinvoices', compact('sale'));
-    }
+     public function view($id)
+{
+    $sale = Sale::with('customer', 'items')->findOrFail($id);
+
+    return view('admin.invoice.viewinvoices', [
+        'sale' => $sale
+    ]);
+}
     
-    // Download single invoice as PDF (GET /admin/invoices/{sale}/download)
     public function download(Sale $sale)
     {
         $sale->load(['items.product', 'customer', 'user']);

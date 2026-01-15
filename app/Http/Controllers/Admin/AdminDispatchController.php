@@ -12,15 +12,45 @@ class AdminDispatchController extends Controller
 {
 public function index()
 {
-    $dispatches = DispatchModel::with('batch.product.category', 'batch.product.quality', 'user')
-        ->whereIn('status', ['Pending', 'In Transit'])
-        ->orderBy('created_at', 'desc')
-        ->get();
-
     $users = User::role('user')->get();
-
-    return view('admin.dispatch.dispatch', compact('dispatches', 'users'));
+    return view('admin.dispatch.dispatch', compact('users'));
 }
+
+public function tableDispatches(Request $request)
+{
+    $query = DispatchModel::with([
+            'batch.product.category',
+            'batch.product.quality',
+            'user'
+        ])
+        ->whereIn('status', ['Pending', 'In Transit'])
+        ->orderBy('created_at', 'desc');
+
+    // Search
+    if ($request->filled('search')) {
+        $query->whereHas('batch.product', function($q) use ($request) {
+            $q->where('name', 'like', '%'.$request->search.'%');
+        });
+    }
+
+    // Status filter
+    if ($request->status && $request->status !== 'all') {
+        $query->where('status', $request->status);
+    }
+
+    $dispatches = $query->paginate(10);
+
+    // Return JSON
+    return response()->json([
+        'data' => $dispatches->items(),
+        'current_page' => $dispatches->currentPage(),
+        'last_page' => $dispatches->lastPage(),
+        'per_page' => $dispatches->perPage(),
+        'total' => $dispatches->total(),
+    ]);
+}
+
+
 
 
     // Distribute batch (partial or full)
@@ -138,19 +168,63 @@ public function index()
     }
 
 
-public function completed()
-{
+public function completed(Request $request)
+ {
+    $search = $request->input('search');
+
     $dispatches = DispatchModel::with([
             'batch.product.category',
             'batch.product.quality',
             'user'
         ])
         ->where('status', 'Received')
+        ->when($search, function($query, $search) {
+            $query->whereHas('batch.product', function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%");
+            })
+            ->orWhereHas('user', function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%");
+            })
+            ->orWhere('driver', 'like', "%{$search}%");
+        })
         ->orderBy('received_date', 'desc')
-        ->get();
+        ->paginate(10);
 
-    return view('admin.dispatch.dispatchcompleted', compact('dispatches'));
+    return view('admin.dispatch.dispatchcompleted', compact('dispatches', 'search'));
 }
+public function ajaxCompletedDispatches(Request $request)
+{
+    $search = $request->input('search');
+
+    $query = DispatchModel::with([
+            'batch.product.category',
+            'batch.product.quality',
+            'user'
+        ])
+        ->where('status', 'Received')
+        ->orderBy('received_date', 'desc');
+
+    if ($search) {
+        $query->whereHas('batch.product', function($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%");
+        })
+        ->orWhereHas('user', function($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%");
+        })
+        ->orWhere('driver', 'like', "%{$search}%");
+    }
+
+    $dispatches = $query->paginate(10);
+
+    return response()->json([
+        'data' => $dispatches->items(),
+        'current_page' => $dispatches->currentPage(),
+        'last_page' => $dispatches->lastPage(),
+        'per_page' => $dispatches->perPage(),
+        'total' => $dispatches->total(),
+    ]);
+}
+
 
 
 }

@@ -262,7 +262,7 @@ $(document).ready(function(){
         processing: true,
         serverSide: true,
         ajax: {
-            url: "{{ url('/admin/invoices/allinvoices') }}",
+            url: "{{ url('/admin/allinvoices') }}",
             data: function(d){
                 d.months = $('#monthsFilter').val();
                 d.payment_status = $('#paymentStatusFilter').val();
@@ -340,7 +340,7 @@ $(document).ready(function(){
     function updateExportLink() {
         const months = $('#monthsFilter').val();
         const status = $('#paymentStatusFilter').val();
-        let url = "{{ url('/admin/invoices/download-all') }}?months=" + months;
+        let url = "{{ url('/admin/download-all') }}?months=" + months;
         
         if (status && status !== 'all') {
             url += '&payment_status=' + status;

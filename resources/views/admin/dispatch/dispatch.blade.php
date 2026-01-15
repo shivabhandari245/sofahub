@@ -29,75 +29,38 @@
        <div class="card">
     <h2>Dispatches for ShowRooms</h2>
 
-    <div class="search-filter" style="display: flex; gap: 10px; margin-bottom: 15px;">
-        <input type="text" id="searchDispatches" placeholder="Search dispatches..." />
-        <select id="filterDispatchStatus">
-            <option value="all">All Status</option>
-            <option value="Dispatched">Dispatched</option>
-            <option value="In Transit">In Transit</option>
-            <option value="Delivered">Delivered</option>
-        </select>
-    </div>
+<div class="search-filter" style="display:flex; gap:10px; margin-bottom:10px;">
+    <input type="text" id="searchDispatches" placeholder="Search dispatches...">
+    <select id="filterDispatchStatus">
+        <option value="all">All Status</option>
+        <option value="Pending">Pending</option>
+        <option value="In Transit">In Transit</option>
+    </select>
+</div>
 
-    <div class="table-responsive">
-        <table class="table" id="dispatchesTable" border="1" style="width:100%; border-collapse: collapse;">
-            <thead style="background: #f5f5f5;">
-                <tr>
-                    <th>SN</th>
-                    <th>Product</th>
-                    <th>Category</th>                   
-                    <th>Quality</th>
-                    <th>Quantity</th>
-                    <th>Unit Cost</th>
-                    <th>Total Cost</th>
-                    <th>ShowRoom</th>
-                    <th>Driver</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-                    <tbody id="dispatchesList">
-                        @php
-                            $a=1;
-                        @endphp
-                        @foreach($dispatches as $dispatch)
-                            <tr>
-                                <td>{{ $a++ }}</td>
-                                <td>{{ $dispatch->batch->product->name ?? '-' }}</td>
-                                <td>{{ $dispatch->batch->product->category->name ?? '-' }}</td>
-                                <td>{{ $dispatch->batch->product->quality->name ?? '-' }}</td>
-                                <td>{{ number_format($dispatch->batch->expected_unit_cost ?? 0, 2) }}</td>
-                                <td>{{ number_format($dispatch->batch->total_cost ?? 0, 2) }}</td>
+<table class="table" border="1" style="width:100%;">
+    <thead>
+        <tr>
+            <th>SN</th>
+            <th>Product</th>
+            <th>Category</th>
+            <th>Quality</th>
+            <th>Quantity</th>
+            <th>Unit Cost</th>
+            <th>Total Cost</th>
+            <th>ShowRoom</th>
+            <th>Driver</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody id="dispatchTableBody">
+        <!-- AJAX rows -->
+    </tbody>
+</table>
 
-                                <td>{{ $dispatch->quantity }}</td>
-                                <td>{{ $dispatch->user ? $dispatch->user->name : '-' }}</td>
-                                <td>{{ $dispatch->driver ?? '-' }}</td>
-                                <td>{{ $dispatch->status }}</td>
-                                <td>
-                                    @if($dispatch->status == 'Pending')
-                                        <button type="button" class="btn btn-sm btn-success sendBtn"
-                                            data-id="{{ $dispatch->id }}"
-                                            data-quantity="{{ $dispatch->quantity }}"
-                                            data-product="{{ $dispatch->batch->product->name }}">
-                                            Send
-                                        </button>
-                                    @elseif($dispatch->status == 'In Transit')
-                                        <button type="button" class="btn btn-sm btn-danger cancelBtn"
-                                            data-id="{{ $dispatch->id }}">
-                                            Cancel
-                                        </button>
-                                    @else
-                                        -
-                                    @endif
-                                </td>
+<div id="pagination" style="margin-top:10px;"></div>
 
-
-                            </tr>
-                        @endforeach
-                    </tbody>
-
-        </table>
-    </div>
 </div>
 <style>
     .modal {
