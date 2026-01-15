@@ -17,16 +17,14 @@ Route::get('/', function () {
     if (Auth::check()) {
         $user = Auth::user();
 
-        return match ($user->role) {
-            'admin' => redirect()->route('admin.dashboard'),
-            'user'  => redirect()->route('user.userproducts.dashboard'),
-            default => redirect()->route('login'),
-        };
+        if (!$user->approved) return redirect()->route('waitingapproval');
+        if (!$user->otp_verified) return redirect()->route('otp.index');
+
+        return redirect()->route($user->role === 'admin' ? 'admin.dashboard' : 'user.userproducts.dashboard');
     }
 
-    return app(\App\Http\Controllers\HomeController::class)->index();
+    return view('index'); 
 });
-
 
 
 // Show OTP verification form
