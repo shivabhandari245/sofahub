@@ -12,12 +12,12 @@ use App\Models\UserCategory;
 use Illuminate\Support\Facades\DB;
 
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+
 use Yajra\DataTables\Facades\DataTables;
 
 class SaleController extends Controller
 {
-    use AuthorizesRequests;
+    
 
 public function index(Request $request)
 {
@@ -177,7 +177,7 @@ public function store(Request $request)
 {
 
 
-    $this->authorize('create', Sale::class);
+  
 
     $validated = $request->validate([
         'customer_id'      => 'required|exists:customers,id',
@@ -299,7 +299,7 @@ public function store(Request $request)
 public function show(Sale $sale)
 
 {
-     $this->authorize('view', $sale);
+    
 
     $sale->load('items.product', 'customer', 'user');
     return view('user.sales.show', compact('sale'));
@@ -307,7 +307,7 @@ public function show(Sale $sale)
 
 public function print(Sale $sale)
 {
-    $this->authorize('view', $sale);
+ 
     $sale->load('items.product', 'customer', 'user');
 
   

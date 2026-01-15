@@ -14,10 +14,10 @@ use App\Http\Controllers\SaleItemController as ControllersSaleItemController;
 use App\Http\Controllers\User\SaleItemController;
 use App\Http\Controllers\User\SaleController as UserSaleController;
 use App\Http\Controllers\User\UserCustomerController;
-
+use App\Http\Middleware\BlockUntilApproved;
 use Spatie\Permission\Middleware\RoleMiddleware;
 
-Route::prefix('user')->middleware(['auth', RoleMiddleware::using('user|admin')])->group(function () {
+Route::prefix('user')->middleware(['auth',BlockUntilApproved::class, RoleMiddleware::using('user|admin')])->group(function () {
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])
