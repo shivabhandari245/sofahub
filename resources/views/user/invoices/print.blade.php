@@ -94,15 +94,26 @@
                     <td class="text-end">{{ number_format($sale->total_amount, 2) }}</td>
                 </tr>
                 <tr>
-                    <th>Payment:</th>
-                    <td class="text-end">{{ $sale->payment_method ? ucfirst($sale->payment_method) : 'N/A' }}</td>
-                </tr>
-                @if($sale->payment_remarks)
-                <tr>
-                    <th>Remarks:</th>
-                    <td class="text-end">{{ $sale->payment_remarks }}</td>
-                </tr>
-                @endif
+                 <th>Payment Method:</th>
+    <td class="text-end">
+        @php
+        $icons = ['cash'=>'💵', 'qr'=>'📱', 'cheque'=>'🧾'];
+        @endphp
+        @if(!empty($sale->payment_method))
+            @foreach($sale->payment_method as $method)
+                <span>{{ $icons[$method] ?? '' }} {{ ucfirst($method) }}</span>@if(!$loop->last), @endif
+            @endforeach
+        @else
+            N/A
+        @endif
+    </td>
+</tr>
+@if($sale->payment_remarks)
+<tr>
+    <th>Remarks:</th>
+    <td class="text-end">{{ $sale->payment_remarks }}</td>
+</tr>
+@endif
             </table>
         </div>
     </div>
