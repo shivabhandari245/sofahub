@@ -104,15 +104,15 @@ class AccountController extends Controller
     // Approve pending user
     public function approve(User $user)
     {
-        if ($user->approved) {
+          if ($user->approved) {
             return redirect()->route('accounts')->with('error', 'User is already approved.');
         }
 
-        $user->update([
-            'approved' => true,
-            'approved_by' => Auth::id(),
-            'approved_at' => now(),
-        ]);
+        // Update directly and save
+        $user->approved = true;
+        $user->approved_by = Auth::id();
+        $user->approved_at = now();
+              $user->save();
 
         return redirect()->route('accounts')->with('success', 'User approved successfully.');
     }

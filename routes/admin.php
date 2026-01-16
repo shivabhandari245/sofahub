@@ -15,11 +15,53 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\AdminDispatchController;
 use App\Http\Controllers\Admin\BatchCategoryController;
 use App\Http\Controllers\Admin\AdminInvoicesController;
-
-
+use App\Http\Middleware\BlockUntilApproved;
 use Spatie\Permission\Middleware\RoleMiddleware;
 
-Route::prefix('admin')->middleware(['auth', RoleMiddleware::using('admin')])->group(function () {
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+
+
+
+        // Start impersonation
+  Route::prefix('admin')->middleware(['auth'])->group(function () {    
+   Route::post('/leave-impersonation', function () {
+
+            abort_unless(session()->has('impersonator_id'), 403);
+
+            Auth::loginUsingId(session('impersonator_id'));
+            session()->forget('impersonator_id');
+
+            return redirect('/admin/dashboard');
+        })->name('admin.leave-impersonation');
+});
+Route::prefix('admin')->middleware(['auth',RoleMiddleware::using('admin')])->group(function () {
+
+
+  Route::post('/impersonate/{user}', function (User $user) {
+
+    if ($user->hasRole('admin')) {
+        abort(403, 'Cannot impersonate admin');
+    }
+
+            if (!$user->hasRole('user')) {
+        abort(403, 'Cannot impersonate this user');
+    }
+
+            session([
+                'impersonator_id' => Auth::id()
+            ]);
+
+            Auth::login($user);
+
+            return redirect('/user/dashboard');
+        })->name('admin.impersonate');
+
+        // Stop impersonation
+     
+   
+
+ 
 
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/dispatch', [AdminDispatchController::class, 'index']);

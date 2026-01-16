@@ -140,16 +140,34 @@
                             </button>
                         </form>
                     </td>
+                 <td data-label="Impersonate">
+    @if(!$user->hasRole('admin'))
+    <form action="{{ route('admin.impersonate', $user->id) }}"
+          method="POST"
+          onsubmit="return confirm('Login as this user?')">
+        @csrf
+        <button class="btn btn-sm btn-warning">
+            Login as User
+        </button>
+    </form>
+    @else
+        <span class="text-muted">—</span>
+    @endif
+</td>
+
+                    </td>
                 </tr>
                 @endforeach
             </tbody>
         </table>
     </div>
 
-    {{-- ================= PENDING USERS ================= --}}
-    <div class="card">
-        <h3>Pending User Approvals</h3>
+  <div class="card">
+    <h3>Pending User Approvals</h3>
 
+    @if($pendingUsers->isEmpty())
+        <p class="text-muted">No pending users.</p>
+    @else
         <table>
             <thead>
                 <tr>
@@ -164,9 +182,10 @@
                     <td data-label="Name">{{ $user->name }}</td>
                     <td data-label="Email">{{ $user->email }}</td>
                     <td data-label="Action">
-                        <form action="{{ route('users.approve', $user) }}" method="POST">
+                        <form action="{{ route('users.approve', $user->id) }}" method="POST" style="display:inline;">
                             @csrf
-                            <button type="submit" class="btn btn-success">
+                            <button type="submit" class="btn btn-success"
+                                onclick="return confirm('Approve this user?')">
                                 Approve
                             </button>
                         </form>
@@ -175,22 +194,25 @@
                 @endforeach
             </tbody>
         </table>
-    </div>
+    @endif
+</div>
 
     @endsection
 
     @push('scripts')
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const btn = document.getElementById('toggleFormBtn');
-        const form = document.getElementById('userFormCard');
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('toggleFormBtn');
+    const form = document.getElementById('userFormCard');
 
-        btn.addEventListener('click', () => {
-            const isHidden = form.style.display === 'none' || form.style.display === '';
+    if (!btn || !form) return; // Prevent "Cannot read properties of null"
 
-            form.style.display = isHidden ? 'block' : 'none';
-            btn.textContent = isHidden ? 'Close Form' : 'Add User';
-        });
+    btn.addEventListener('click', () => {
+        const isHidden = form.style.display === 'none' || form.style.display === '';
+        form.style.display = isHidden ? 'block' : 'none';
+        btn.textContent = isHidden ? 'Close Form' : 'Add User';
     });
-    </script>
+});
+</script>
+
     @endpush

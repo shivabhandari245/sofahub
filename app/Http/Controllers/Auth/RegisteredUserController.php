@@ -8,6 +8,7 @@ use App\Services\OtpService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 
 class RegisteredUserController extends Controller
 {
@@ -18,17 +19,13 @@ class RegisteredUserController extends Controller
         $this->otpService = $otpService;
     }
 
-    /**
-     * Display the registration view.
-     */
+    // Show registration form
     public function create()
     {
         return view('auth.register');
     }
 
-    /**
-     * Handle an incoming registration request.
-     */
+    // Handle registration
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
@@ -41,11 +38,17 @@ class RegisteredUserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'otp_verified' => false,
+            'approved' => false,
         ]);
 
-        
+        // Log in user
+        Auth::login($user);
+
+        // Generate OTP
         $this->otpService->generate($user);
 
+        // Store user ID in session for fallback
         session(['otp_user_id' => $user->id]);
 
         return redirect()->route('otp.index')

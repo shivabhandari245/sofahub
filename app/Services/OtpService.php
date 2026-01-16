@@ -4,42 +4,56 @@ namespace App\Services;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Mail;
+use Carbon\Carbon;
 
 class OtpService
 {
-    protected int $otpLength = 6; // 6-digit OTP
-    protected int $otpTTL = 5 * 60; // 5 minutes
-    protected int $resendTTL = 30; // 30 seconds
+    protected int $otpLength = 6;
+    protected int $expiryMinutes = 5;   // OTP expires in 5 minutes
+    protected int $resendCooldown = 30; // seconds
 
     /**
-     * Generate OTP for a user and store in cache
+     * Generate OTP for user
      */
-    public function generate(User $user): string
+    public function generate(User $user): void
     {
-        $otp = (string) random_int(100000, 999999); // always store as string
-        $cacheKey = $this->otpCacheKey($user);
+        $otp = $this->generateRandomOtp();
 
-        Cache::put($cacheKey, $otp, $this->otpTTL);
-        RateLimiter::hit($this->resendCacheKey($user), $this->resendTTL);
+        // Store OTP in cache
+        Cache::put($this->cacheKey($user), $otp, now()->addMinutes($this->expiryMinutes));
 
-        $this->sendOtp($user, $otp);
+        // Store resend cooldown
+        Cache::put($this->resendKey($user), now()->addSeconds($this->resendCooldown), $this->resendCooldown);
 
-        return $otp;
+        // Send OTP email
+        $this->sendOtpEmail($user, $otp);
     }
 
     /**
-     * Validate OTP safely
+     * Resend OTP
+     */
+    public function resend(User $user): void
+    {
+        if (!$this->canResend($user)) {
+            $availableAt = Cache::get($this->resendKey($user));
+            $seconds = $availableAt ? Carbon::parse($availableAt)->diffInSeconds(now()) : $this->resendCooldown;
+            throw new \Exception("Please wait {$seconds} seconds before resending OTP.");
+        }
+
+        $this->generate($user);
+    }
+
+    /**
+     * Validate OTP
      */
     public function validate(User $user, string $otp): bool
     {
-        $cacheKey = $this->otpCacheKey($user);
-        $storedOtp = Cache::get($cacheKey);
+        $cachedOtp = Cache::get($this->cacheKey($user));
 
-        // Ensure both are strings for hash_equals
-        if ($storedOtp !== null && hash_equals((string) $storedOtp, $otp)) {
-            Cache::forget($cacheKey); // single-use
+        if ($cachedOtp && $cachedOtp === $otp) {
+            // OTP valid → remove it from cache
+            Cache::forget($this->cacheKey($user));
             return true;
         }
 
@@ -51,33 +65,45 @@ class OtpService
      */
     public function canResend(User $user): bool
     {
-        $key = $this->resendCacheKey($user);
-        return RateLimiter::remaining($key, 1) > 0;
-    }
-    
+        $nextAvailable = Cache::get($this->resendKey($user));
+        if (!$nextAvailable) return true;
 
-      public function resend(User $user): string
-    {
-        // simply call generate() to create a new OTP and send it
-        return $this->generate($user);
+        return now()->greaterThanOrEqualTo(Carbon::parse($nextAvailable));
     }
 
-
-    protected function sendOtp(User $user, string $otp): void
+    /**
+     * Generate random numeric OTP
+     */
+    protected function generateRandomOtp(): string
     {
-        Mail::raw("Your OTP code is: $otp", function ($message) use ($user) {
+        return str_pad((string)random_int(0, 999999), $this->otpLength, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * OTP cache key
+     */
+    protected function cacheKey(User $user): string
+    {
+        return "user:otp:{$user->id}";
+    }
+
+    /**
+     * Resend cooldown cache key
+     */
+    protected function resendKey(User $user): string
+    {
+        return "user:otp:resend:{$user->id}";
+    }
+
+    /**
+     * Send OTP email
+     */
+    protected function sendOtpEmail(User $user, string $otp): void
+    {
+        // Replace with your Mailable class
+        Mail::raw("Your OTP code is: {$otp}. It expires in {$this->expiryMinutes} minutes.", function($message) use ($user) {
             $message->to($user->email)
                     ->subject('Your OTP Code');
         });
-    }
-
-    protected function otpCacheKey(User $user): string
-    {
-        return 'otp:' . $user->id;
-    }
-
-    protected function resendCacheKey(User $user): string
-    {
-        return 'otp-resend:' . $user->id;
     }
 }

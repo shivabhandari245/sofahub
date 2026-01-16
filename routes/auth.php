@@ -22,17 +22,10 @@ Route::middleware('guest')->group(function () {
     Route::post('reset-password', [NewPasswordController::class, 'store'])->name('password.store');
 });
 
-// Authenticated routes
+
+
 Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
-    // OTP routes
-    Route::get('/verify-otp', [OtpController::class, 'index'])->name('otp.index');
-    Route::post('/verify-otp', [OtpController::class, 'verify'])->name('otp.verify');
-    Route::post('/otp/resend', [OtpController::class, 'resend'])->name('otp.resend');
-
-    // Waiting approval
-    Route::get('/waitingapproval', function () {
-        return view('auth.waitingapproval');
-    })->name('waitingapproval');
 });
+
