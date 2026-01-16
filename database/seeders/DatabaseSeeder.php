@@ -11,7 +11,7 @@ public function run(): void
 {
     $this->call([
        RoleAndUserSeeder::class,
-     
+       PurchaseSeeder::class,
       
     ]);
 }

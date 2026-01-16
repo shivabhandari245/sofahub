@@ -147,7 +147,7 @@ public function ajaxList(Request $request)
             'name'             => $product->name,
             'category'         => $product->category,
             'quality'          => $product->quality,
-            'cost_per_product' => number_format($product->cost_per_product, 2),
+            'cost_per_product' => $product->cost_per_product,
             'quantity'         => $product->quantity,
         ])
     ]);
@@ -304,6 +304,47 @@ public function show(Sale $sale)
     $sale->load('items.product', 'customer', 'user');
     return view('user.sales.show', compact('sale'));
 }
+
+
+
+
+public function updatePaymentStatus(Request $request, $id)
+{
+    $sale = Sale::findOrFail($id);
+
+    $validated = $request->validate([
+        'payment_status'   => 'required|in:paid,unpaid,partially_paid',
+        'payment_method'   => 'nullable|array',
+        'payment_method.*' => 'in:cash,qr,cheque',
+        'payment_remarks'  => 'nullable|string|max:500',
+    ]);
+
+    $paymentStatus  = $validated['payment_status'];
+    $paymentMethods = $validated['payment_method'] ?? [];
+    $paymentRemarks = $validated['payment_remarks'] ?? null;
+
+    // Business logic
+    if ($paymentStatus === 'unpaid') {
+        $paymentMethods = [];
+        $paymentRemarks = null;
+    }
+
+    if ($paymentStatus === 'paid' && empty($paymentMethods)) {
+        return back()->withErrors(['payment_method' => 'Payment method is required for paid sales.']);
+    }
+
+    // Update the sale
+    $sale->update([
+        'payment_status'  => $paymentStatus,
+        'payment_method'  => $paymentMethods,
+        'payment_remarks' => $paymentRemarks,
+    ]);
+
+    return redirect()->route('user.sales.show', $sale->id)
+                     ->with('success', 'Payment status updated successfully.');
+}
+
+
 
 public function print(Sale $sale)
 {

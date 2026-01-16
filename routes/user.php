@@ -58,7 +58,7 @@ Route::get('products/ajax', [SaleController::class, 'ajaxList'])->name('user.pro
 Route::post('/saleitems/return/{id}', [SaleItemController::class, 'returnItem'])->name('saleitems.return');
 Route::get('user/saleitems/list', [SaleItemController::class, 'getSaleItems'])
     ->name('user.saleitems.list');
-
+Route::patch('user/invoices/paymentstatus/{id}', [SaleController::class, 'updatePaymentStatus'])->name('sales.updatePaymentStatus');
 
 Route::get('/customers/search', [UserCustomerController::class, 'search'])->name('user.customers.search');
 Route::post('/customers', [UserCustomerController::class, 'store'])->name('user.customers.store');
@@ -72,9 +72,6 @@ Route::get('customers/ajax-search', [SaleController::class, 'getCustomers'])->na
     // Products & Purchase
     Route::get('/products', [UserProductsController::class, 'index'])->name('user.products.index');
 
-
-
-    
 
     Route::get('/purchase', [UserPurchaseController::class, 'index'])->name('user.purchase.index');
     Route::post('/purchase', [UserPurchaseController::class, 'store'])->name('user.purchase.store');

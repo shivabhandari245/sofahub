@@ -91,7 +91,7 @@
                             <td>
                                 <span class="badge 
                                     {{ $sale->payment_status === 'paid' ? 'bg-success' :
-                                       ($sale->payment_status === 'partial' ? 'bg-warning' : 'bg-danger') }}">
+                                       ($sale->payment_status === 'partially_paid' ? 'bg-warning' : 'bg-danger') }}">
                                     {{ ucfirst($sale->payment_status) }}
                                 </span>
                             </td>
@@ -168,62 +168,51 @@
             <button class="close-btn" onclick="closeModal()">×</button>
         </div>
 
-        <form method="POST" action="{{ url('user/invoices/paymentstatus', $sale->id) }}">
+       <form method="POST" action="{{ route('sales.updatePaymentStatus', $sale->id) }}">
+
             @csrf
             @method('PATCH')
             <div class="custom-modal-body">
+
+                {{-- Payment Status --}}
                 <div class="form-group">
                     <label>Payment Status</label>
                     <select name="payment_status" class="form-control" required>
                         <option value="paid" {{ $sale->payment_status == 'paid' ? 'selected' : '' }}>Paid</option>
-                        <option value="partial" {{ $sale->payment_status == 'partial' ? 'selected' : '' }}>Partial</option>
+                        <option value="partially_paid" {{ $sale->payment_status == 'partially_paid' ? 'selected' : '' }}>Partial</option>
                         <option value="unpaid" {{ $sale->payment_status == 'unpaid' ? 'selected' : '' }}>Unpaid</option>
-                                </select>
+                    </select>
+                </div>
+
+                {{-- Payment Methods --}}
+                <div class="form-group">
+                    <label>Payment Method</label>
+                    <div class="row align-items-center">
+                        <div class="col-4">
+                            <div class="form-check">
+                                <input class="form-check-input payment-check" type="checkbox" name="payment_method[]" value="cash" id="payCash"
+                                    {{ in_array('cash', $sale->payment_method ?? []) ? 'checked' : '' }}>
+                                <label class="form-check-label" for="payCash">💵 Cash</label>
                             </div>
-
-                    <div class="form-group">
-                        <label class="mb-2">Payment Method</label>
-
-                        <div class="row align-items-center">
-                            <div class="col-4">
-                                <div class="form-check">
-                                    <input class="form-check-input payment-check"
-                                        type="checkbox"
-                                        name="payment_method[]"     
-                                        value="cash"
-                                        id="payCash"
-                                        {{ in_array('cash', $sale->payment_method ?? []) ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="payCash">💵 Cash</label>
-                                </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="form-check">
+                                <input class="form-check-input payment-check" type="checkbox" name="payment_method[]" value="qr" id="payQR"
+                                    {{ in_array('qr', $sale->payment_method ?? []) ? 'checked' : '' }}>
+                                <label class="form-check-label" for="payQR">📱 QR</label>
                             </div>
-
-                            <div class="col-4">
-                                <div class="form-check">
-                                    <input class="form-check-input payment-check"
-                                        type="checkbox"
-                                        name="payment_method[]"
-                                        value="qr"
-                                        id="payQR"
-                                        {{ in_array('qr', $sale->payment_method ?? []) ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="payQR">📱 QR</label>
-                                </div>
-                            </div>
-
-                            <div class="col-4">
-                                <div class="form-check">
-                                    <input class="form-check-input payment-check"
-                                        type="checkbox"
-                                        name="payment_method[]"
-                                        value="cheque"
-                                        id="payCheque"
-                                        {{ in_array('cheque', $sale->payment_method ?? []) ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="payCheque">🧾 Cheque</label>
-                                </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="form-check">
+                                <input class="form-check-input payment-check" type="checkbox" name="payment_method[]" value="cheque" id="payCheque"
+                                    {{ in_array('cheque', $sale->payment_method ?? []) ? 'checked' : '' }}>
+                                <label class="form-check-label" for="payCheque">🧾 Cheque</label>
                             </div>
                         </div>
                     </div>
+                </div>
 
-
+                {{-- Remarks --}}
                 <div class="form-group">
                     <label>Remarks</label>
                     <textarea name="payment_remarks" class="form-control" rows="2">{{ $sale->payment_remarks }}</textarea>
@@ -237,6 +226,9 @@
         </form>
     </div>
 </div>
+
+           
+     
 <script>
     function openModal() {
     document.getElementById('paymentStatusModal').style.display = 'flex';
@@ -244,6 +236,22 @@
  function closeModal() {
     document.getElementById('paymentStatusModal').style.display = 'none';
  }
+document.querySelector('select[name="payment_status"]').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.payment-check');
+    if (this.value === 'unpaid') {
+        // Uncheck all for unpaid
+        checkboxes.forEach(cb => cb.checked = false);
+    } else if (this.value === 'paid') {
+        // Optionally check all by default for fully paid
+        checkboxes.forEach(cb => cb.checked = true);
+    } else if (this.value === 'partially_paid') {
+        // Optionally check at least one checkbox if none selected
+        const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+        if (!anyChecked) {
+            checkboxes[0].checked = true; // default first method
+        }
+    }
+});
 
  
 </script>

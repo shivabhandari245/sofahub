@@ -47,7 +47,7 @@
                     <h5 class="mb-0">
                         <i class="fas fa-boxes me-2"></i>Available Products
                     </h5>
-                    <span class="badge bg-primary" id="productCount">0 products</span>
+                    <span class="badge bg-primary" id="productCount">products</span>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -694,6 +694,10 @@ $(document).ready(function () {
                 d.category_id = $('#category').val();
             }
         },
+
+          drawCallback: function (settings) {
+        $('#productCount').text(settings._iRecordsTotal + ' products');
+    },
 
         columns: [
             { data: 'name' },
