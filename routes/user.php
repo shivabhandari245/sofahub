@@ -85,8 +85,8 @@ Route::get('customers/ajax-search', [SaleController::class, 'getCustomers'])->na
     Route::get('/latest', [UserPurchaseController::class, 'latestPurchases'])->name('user.purchase.latest');
 Route::get('purchases/{purchase}/edit', [UserPurchaseController::class, 'edit'])->name('user.purchase.edit');
 
-     Route::put('/purchase/{id}', [UserPurchaseController::class, 'update'])->name('purchase.update');  
-    Route::delete('/purchase/{id}', [UserPurchaseController::class, 'destroy'])->name('purchase.destroy');
+     Route::put('/purchase/{purchase}', [UserPurchaseController::class, 'update'])->name('user.purchase.update');  
+    Route::delete('/purchase/{purchase}', [UserPurchaseController::class, 'destroy'])->name('user.purchase.destroy');
 
 // Invoices
 Route::prefix('invoices')->group(function () {

@@ -1,11 +1,10 @@
 <?php
-
 namespace App\Http\Controllers\Auth;
-
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Services\OtpService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Services\OtpService;
 
 class OtpController extends Controller
 {
@@ -16,51 +15,54 @@ class OtpController extends Controller
         $this->otpService = $otpService;
     }
 
-    // Show OTP form
     public function index()
     {
-        $user = Auth::user();
+        if (!session()->has('otp_user_id')) {
+            return redirect()->route('login');
+        }
 
-        if (!$user) {
-            return redirect()->route('login')
-                ->with('error', 'Please login to verify OTP.');
+        $user = User::find(session('otp_user_id'));
+
+        if (!$user || $user->otp_verified) {
+            session()->forget('otp_user_id');
+            return redirect()->route('login');
         }
 
         return view('auth.verify-otp');
     }
 
-    // Verify OTP
     public function verify(Request $request)
     {
         $request->validate(['otp' => 'required|digits:6']);
 
-        $user = Auth::user();
+        $user = User::find(session('otp_user_id'));
+        if (!$user) return redirect()->route('login');
 
         if (!$this->otpService->validate($user, $request->otp)) {
             return back()->withErrors(['otp' => 'Invalid or expired OTP.']);
         }
-/** @var \App\Models\User $user */
+
         $user->otp_verified = true;
         $user->save();
+
+        session()->forget('otp_user_id');
+
+        Auth::login($user);
 
         return redirect()->route(
             $user->hasRole('admin') ? 'admin.dashboard' : 'user.userproducts.dashboard'
         );
     }
 
-    // Resend OTP
     public function resend(Request $request)
     {
-        $user = Auth::user();
-
-        if (!$user) {
-            return response()->json(['error' => 'User not found.'], 404);
-        }
+        $user = User::find(session('otp_user_id'));
+        if (!$user) return response()->json(['error' => 'User not found.'], 404);
 
         try {
             $this->otpService->resend($user);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to resend OTP.'], 500);
+            return response()->json(['error' => $e->getMessage()], 429);
         }
 
         return response()->json(['message' => 'A new OTP has been sent to your email.']);

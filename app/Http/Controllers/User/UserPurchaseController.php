@@ -166,11 +166,22 @@ class UserPurchaseController extends Controller
         return response()->json(['message'=>'Purchase updated successfully!']);
     }
 
-    // Delete purchase
-    public function destroy(PurchaseModel $purchase)
-    {
-        // ✅ Using Policy
-        $purchase->delete();
-        return response()->json(['message'=>'Purchase deleted successfully!']);
+   public function destroy(PurchaseModel $purchase)
+{
+    try {
+        $deleted = $purchase->delete();
+
+        if($deleted){
+            return response()->json(['message'=>'Purchase deleted successfully!']);
+        }
+        return response()->json(['message'=>'Purchase could not be deleted.'], 400);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'message' => 'Delete failed',
+            'error' => $e->getMessage()
+        ], 400);
     }
+}
+
 }

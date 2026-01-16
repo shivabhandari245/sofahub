@@ -1,14 +1,11 @@
 <?php
-
 namespace App\Http\Controllers\Auth;
-
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\OtpService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
 
 class RegisteredUserController extends Controller
 {
@@ -19,13 +16,22 @@ class RegisteredUserController extends Controller
         $this->otpService = $otpService;
     }
 
-    // Show registration form
     public function create()
     {
+        // OTP pending → redirect
+        if (session()->has('otp_user_id')) {
+            $user = User::find(session('otp_user_id'));
+
+            if ($user && !$user->otp_verified) {
+                return redirect()->route('otp.index');
+            }
+
+            session()->forget('otp_user_id');
+        }
+
         return view('auth.register');
     }
 
-    // Handle registration
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
@@ -34,6 +40,7 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', 'min:8'],
         ]);
 
+        // Create user (not logged in yet)
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
@@ -42,16 +49,13 @@ class RegisteredUserController extends Controller
             'approved' => false,
         ]);
 
-        // Log in user
-        Auth::login($user);
-
         // Generate OTP
         $this->otpService->generate($user);
 
-        // Store user ID in session for fallback
+        // Store OTP session
         session(['otp_user_id' => $user->id]);
 
         return redirect()->route('otp.index')
-            ->with('message', 'Registration successful! An OTP has been sent to your email.');
+            ->with('message', 'Registration successful! Please verify OTP sent to your email.');
     }
 }

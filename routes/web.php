@@ -3,26 +3,44 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Auth\OtpController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use App\Models\User;
 
 Route::get('/', function () {
-  
+
+    // Guest → show homepage
     if (!Auth::check()) {
         return view('index');
     }
 
+    /** @var User $user */
     $user = Auth::user();
 
+    // If user is not approved → waiting page
     if (!$user->approved) {
+        Auth::logout();
         return redirect()->route('waitingapproval');
     }
 
+    // If OTP pending → OTP page
     if (!$user->otp_verified) {
+        Auth::logout();
+        session(['otp_user_id' => $user->id]);
         return redirect()->route('otp.index');
     }
 
-    
-    return redirect()->route($user->role === 'admin' ? 'admin.dashboard' : 'user.userproducts.dashboard');
+    // Fully verified & approved → role-based redirect
+    if ($user->hasRole('admin')) {
+        return redirect()->route('admin.dashboard');
+    }
+
+    if ($user->hasRole('user')) {
+        return redirect()->route('user.userproducts.dashboard');
+    }
+
+    // Default fallback
+    return redirect()->route('waitingapproval');
 });
+
 
 Route::middleware('web')->group(function () {
     
