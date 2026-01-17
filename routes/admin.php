@@ -188,7 +188,7 @@ Route::prefix('admin')->middleware(['auth', RoleMiddleware::using('admin')])->gr
 
   
     
-    // Product routes
+    // batch Product routes
     Route::get('/batchproducts', [BatchCategoryController::class, 'listbatchproduct']);
     Route::post('/batchproducts', [BatchCategoryController::class, 'addbatchproduct']);
     Route::delete('/deletebatchproduct/{id}', [BatchCategoryController::class, 'destroyproduct']);

@@ -15,18 +15,18 @@ return new class extends Migration
     $table->id();
     $table->string("name");
         
-    $table->unsignedBigInteger('productquality_id')->index();
-    $table->unsignedBigInteger('productcategory_id')->index(); 
+    $table->unsignedBigInteger('productquality_id')->nullable()->index();
+    $table->unsignedBigInteger('productcategory_id')->nullable()->index(); 
     $table->decimal('material_cost', 12, 2)->nullable();
     $table->timestamps();
 
     $table->foreign('productquality_id')
                 ->references('id')->on('product_quality')
-                ->onDelete('cascade');
+                ->nullOnDelete();;
 
     $table->foreign('productcategory_id')
                 ->references('id')->on('product_categories')
-                ->onDelete('cascade');
+                ->nullOnDelete();;
 });
 
     }
