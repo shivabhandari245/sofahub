@@ -64,6 +64,9 @@ Route::prefix('admin')->middleware(['auth',RoleMiddleware::using('admin')])->gro
  
 
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
+    Route::get('/dashboard/stock-alerts', [AdminDashboardController::class, 'stockAlerts']
+)->name('admin.dashboard.stock-alerts');
+
     Route::get('/dispatch', [AdminDispatchController::class, 'index']);
     Route::get('/rawmaterials', [RawMaterialController::class, 'index']);
     Route::get('/production', [BatchController::class, 'index']);
@@ -93,15 +96,12 @@ Route::prefix('admin')->middleware(['auth',RoleMiddleware::using('admin')])->gro
 
     // Raw Materials CRUD
     Route::post('/addrawmaterials', [RawMaterialController::class, 'insert']);
-    Route::get('/updaterawmaterials/{id}', [RawMaterialController::class, 'edit']);
     Route::put('/updaterawmaterials/{id}', [RawMaterialController::class, 'update']);
     Route::delete('/deleterawmaterials/{id}', [RawMaterialController::class, 'destroy']);
     Route::post('/restock-material/{id}', [RawMaterialController::class, 'restock']);
     Route::get('/viewmaterialhistory/{id}', [RawMaterialController::class, 'view']);
     Route::get('/rawmaterials/{id}/export-history', [RawMaterialController::class, 'exportHistory'])
          ->name('admin.rawmaterials.export');
-    Route::get('/admin/rawmaterials/{id}/history', [BatchController::class, 'materialHistory'])
-    ->name('rawmaterials.history');
 
 
         //categories for raw materials

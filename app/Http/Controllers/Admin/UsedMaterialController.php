@@ -73,6 +73,7 @@ class UsedMaterialController extends Controller
                 'id' => $item->id,
                 'material_id' => $item->raw_material_id,
                 'material_name' => $item->rawMaterial->name ?? 'Unknown',
+                'category_name' => $item->rawMaterial->category->name ?? 'Unknown',
                 'quantity_used' => $item->quantity_used,
                 'unit_cost' => $item->rawMaterial->unit_cost ?? 0,
                 'total_cost' => $item->total_cost,
