@@ -89,10 +89,6 @@ class AdminInvoicesController extends Controller
                             class="btn btn-sm btn-primary" title="View Details">
                                 <i class="fas fa-eye"></i>
                             </a>
-                        <a href="'.url("/admin/{$sale->id}/download").'" 
-                           class="btn btn-sm btn-danger" title="Download PDF">
-                            <i class="fas fa-file-pdf"></i>
-                        </a>
                     </div>
                 ';
             })
@@ -141,18 +137,15 @@ public function downloadAll(Request $request)
         'sale' => $sale
     ]);
 }
-    
-    public function download(Sale $sale)
-    {
-        $sale->load(['items.product', 'customer', 'user']);
-        
-        // For now, show a view
-        // You can implement PDF generation here
-        return view('admin.invoice.single-pdf', compact('sale'));
-        
-        /* Uncomment to implement actual PDF
-        $pdf = PDF::loadView('admin.invoice.single-pdf', compact('sale'));
-        return $pdf->download('invoice-'.$sale->id.'.pdf');
-        */
-    }
+
+
+    public function printinvoice($id)
+{
+    $sale = Sale::with('customer', 'items')->findOrFail($id);
+
+    return view('admin.invoice.invoiceprint', [
+        'sale' => $sale
+    ]);
+}
+
 }

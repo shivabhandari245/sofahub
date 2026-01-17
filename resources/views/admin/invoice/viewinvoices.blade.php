@@ -12,7 +12,7 @@
                 Invoice #{{ str_pad($sale->id, 6, '0', STR_PAD_LEFT) }}
             </h1>
             <div class="btn-group">
-             <a href="{{ route('sales.print', $sale->id) }}" 
+             <a href="{{ url('admin/printinvoice', $sale->id) }}" 
    class="btn btn-secondary" target="_blank">
     <i class="fas fa-print"></i> Print
 </a>

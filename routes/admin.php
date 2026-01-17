@@ -36,8 +36,6 @@ use Illuminate\Support\Facades\Auth;
         })->name('admin.leave-impersonation');
 });
 Route::prefix('admin')->middleware(['auth',RoleMiddleware::using('admin')])->group(function () {
-
-
   Route::post('/impersonate/{user}', function (User $user) {
 
     if ($user->hasRole('admin')) {
@@ -141,6 +139,7 @@ Route::get('/invoice', [AdminInvoicesController::class, 'index']);
 Route::get('/allinvoices', [AdminInvoicesController::class, 'getSalesData']);
 Route::get('/download-all', [AdminInvoicesController::class, 'downloadAll']);
 Route::get('/viewinvoice/{id}', [AdminInvoicesController::class, 'view'])->name('admin.invoices.show');
+Route::get('/printinvoice/{id}', [AdminInvoicesController::class, 'printinvoice']);
 
 
     //product
@@ -149,7 +148,7 @@ Route::get('/viewinvoice/{id}', [AdminInvoicesController::class, 'view'])->name(
 
     Route::get('/profile', [AdminProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/editprofile', [AdminProfileController::class, 'update'])->name('profile.update');
-    Route::put('/updatepassword', [AdminProfileController::class, 'updatePassword'])->name('profile.updatePassword');
+    Route::put('/updatepassword', [AdminProfileController::class, 'updatePassword'])->name('password.update');
     Route::delete('/deleteprofile', [AdminProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/email/verification-notification', [AdminProfileController::class, 'sendEmailVerification'])
         ->name('verification.send');

@@ -8,122 +8,122 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
 
- <style>
-    /* Professional Stats Cards with Icons - EXACT SAME AS USER */
-    .stats-card {
-        background-color: #fff;
-        border: 1px solid #e0e0e0;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        text-align: center;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        position: relative;
-    }
-
-    .stats-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-
-    .stats-card h6 {
-        font-size: 0.85rem;
-        color: #555;
-        margin-bottom: 0.5rem;
-        font-weight: 600;
-        text-transform: uppercase;
-    }
-
-    .stats-card h2 {
-        font-size: 1.4rem;
-        margin-bottom: 0.25rem;
-        color: #333;
-    }
-
-    .stats-card small {
-        font-size: 0.75rem;
-        color: #666;
-    }
-
-    /* Icon in card */
-    .stats-card i {
-        position: absolute;
-        top: 15px;
-        right: 15px;
-        font-size: 1.5rem;
-        color: #301818ff;
-    }
-
-    /* Payment Status Accent Colors */
-    .bg-paid {
-        border-left: 4px solid #28a745;
-    }
-
-    .bg-unpaid {
-        border-left: 4px solid #dc3545;
-    }
-
-    .bg-partial {
-        border-left: 4px solid #ffc107;
-    }
-
-    /* Filters */
-    .filter-group select,
-    .filter-group .btn {
-        height: calc(1.8em + 0.75rem + 2px);
-        font-size: 0.875rem;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-        .stats-card h2 {
-            font-size: 1.2rem;
+   
+   <style>
+        .stats-card {
+            background-color: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
         }
+
+        .stats-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
         .stats-card h6 {
-            font-size: 0.75rem;
+            font-size: 0.85rem;
+            color: #555;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            text-transform: uppercase;
         }
+
+        .stats-card h2 {
+            font-size: 1.4rem;
+            margin-bottom: 0.25rem;
+            color: #333;
+        }
+
         .stats-card small {
-            font-size: 0.65rem;
+            font-size: 0.75rem;
+            color: #666;
         }
+
+        /* Icon in card */
         .stats-card i {
-            font-size: 1.2rem;
-            top: 10px;
-            right: 10px;
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 1.5rem;
+            color: #301818ff;
         }
-    }
 
-    /* Table responsiveness */
-    .table-responsive {
-        overflow-x: auto;
-    }
+        /* Payment Status Accent Colors */
+        .bg-paid {
+            border-left: 4px solid #28a745;
+        }
 
-    /* Payment Status Badges */
-    .badge-paid {
-        background-color: #28a745;
-        color: white;
-    }
-    
-    .badge-unpaid {
-        background-color: #dc3545;
-        color: white;
-    }
-    
-    .badge-pending {
-        background-color: #ffc107;
-        color: #212529;
-    }
+        .bg-unpaid {
+            border-left: 4px solid #dc3545;
+        }
 
-    /* Action buttons */
-    .action-btns {
-        display: flex;
-        gap: 5px;
-    }
+        .bg-partial {
+            border-left: 4px solid #ffc107;
+        }
 
-    /* Status column width */
-    .status-col {
-        width: 100px;
-    }
-</style>
+        /* Filters */
+        .filter-group select,
+        .filter-group .btn {
+            height: calc(1.8em + 0.75rem + 2px);
+            font-size: 0.875rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .stats-card h2 {
+                font-size: 1.2rem;
+            }
+            .stats-card h6 {
+                font-size: 0.75rem;
+            }
+            .stats-card small {
+                font-size: 0.65rem;
+            }
+            .stats-card i {
+                font-size: 1.2rem;
+                top: 10px;
+                right: 10px;
+            }
+        }
+
+        /* Table responsiveness */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        /* Payment Status Badges */
+        .badge-paid {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .badge-unpaid {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .badge-pending {
+            background-color: #ffc107;
+            color: #212529;
+        }
+
+        /* Action buttons */
+        .action-btns {
+            display: flex;
+            gap: 5px;
+        }
+
+        /* Status column width */
+        .status-col {
+            width: 100px;
+        }
+    </style>
 @endpush
 
 @section('content')
