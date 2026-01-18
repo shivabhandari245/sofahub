@@ -1,7 +1,6 @@
 $(document).ready(function() {
     ProductionManager.init();
 
-    // Summary card click filters
     $('#pending').on('click', () => {
         $('#filterStatus').val('Pending');
         ProductionManager.loadBatches();
@@ -13,7 +12,6 @@ $(document).ready(function() {
     });
 });
 
-
 const ProductionManager = {
     currentPage: 1,
     perPage: 10,
@@ -22,125 +20,25 @@ const ProductionManager = {
         this.loadBatches();
         this.loadDropdownData();
         this.setupEventListeners();
-        this.initializeDatePickers();
     },
     
-    renderBatches: function(bag) {
-        const batches = bag.data || bag; // support full paginated object
-        const html = batches.length > 0 ? 
-            batches.map((batch, index) => this.batchRowTemplate(batch, index)).join('') :
-            this.emptyStateTemplate('No batches found', 'bi-inbox');
-        
-        $('#batchBody').html(html);
-
-        // Render pagination if paginated data
-        if (bag.current_page !== undefined) {
-            this.renderPagination(bag);
-        }
-    },
-
-    renderPagination: function(paginatedData) {
-        const currentPage = paginatedData.current_page || 1;
-        const lastPage = paginatedData.last_page || 1;
-        const $pagination = $('#batchPagination');
-        
-        $pagination.empty();
-
-        if (lastPage <= 1) return; // No pagination needed
-
-        // Create pagination HTML
-        let paginationHtml = '';
-
-        // Previous button
-        paginationHtml += `
-            <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                <a class="page-link" href="#" data-page="${currentPage - 1}">&laquo; Previous</a>
-            </li>
-        `;
-
-        // Page numbers
-        const maxVisible = 5;
-        let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-        let endPage = Math.min(lastPage, startPage + maxVisible - 1);
-        
-        // Adjust start if we're near the end
-        if (endPage - startPage + 1 < maxVisible) {
-            startPage = Math.max(1, endPage - maxVisible + 1);
-        }
-
-        // First page and ellipsis
-        if (startPage > 1) {
-            paginationHtml += `
-                <li class="page-item">
-                    <a class="page-link" href="#" data-page="1">1</a>
-                </li>
-            `;
-            if (startPage > 2) {
-                paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-            }
-        }
-
-        // Page numbers
-        for (let i = startPage; i <= endPage; i++) {
-            paginationHtml += `
-                <li class="page-item ${i === currentPage ? 'active' : ''}">
-                    <a class="page-link" href="#" data-page="${i}">${i}</a>
-                </li>
-            `;
-        }
-
-        // Last page and ellipsis
-        if (endPage < lastPage) {
-            if (endPage < lastPage - 1) {
-                paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-            }
-            paginationHtml += `
-                <li class="page-item">
-                    <a class="page-link" href="#" data-page="${lastPage}">${lastPage}</a>
-                </li>
-            `;
-        }
-
-        // Next button
-        paginationHtml += `
-            <li class="page-item ${currentPage === lastPage ? 'disabled' : ''}">
-                <a class="page-link" href="#" data-page="${currentPage + 1}">Next &raquo;</a>
-            </li>
-        `;
-
-        $pagination.html(paginationHtml);
-
-        // Bind click events
-        $pagination.find('a.page-link').off('click').on('click', (e) => {
-            e.preventDefault();
-            const page = $(e.currentTarget).data('page');
-            if (page && page > 0 && page <= lastPage && page !== currentPage) {
-                this.loadBatches(page);
-            }
-        });
-    },
-
     setupEventListeners: function() {
-        // Form submissions
         $('#batchForm').on('submit', (e) => this.submitBatchForm(e));
         $('#addProductForm').on('submit', (e) => this.addProduct(e));
         $('#addCategoryForm').on('submit', (e) => this.addCategory(e));
         $('#addQualityForm').on('submit', (e) => this.addQuality(e));
         $('#costForm').on('submit', (e) => this.completeBatchWithCost(e));
         
-        // Live search without Enter
         let searchTimeout;
         $('#searchInput').on('keyup', () => {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 this.loadBatches();
-            }, 300); // delay 300ms after typing
+            }, 300);
         });
 
-        // Filter dropdown
         $('#filterStatus').on('change', () => this.loadBatches());
         
-        // Button clicks
         $(document).on('click', '.btn-edit', (e) => {
             const batchId = $(e.currentTarget).closest('tr').data('batch-id');
             this.editBatch(batchId);
@@ -151,37 +49,30 @@ const ProductionManager = {
             const $target = $(e.currentTarget);
             const $row = $target.closest('tr');
             
-            // Determine what type of item we're deleting
             if ($row.data('batch-id')) {
-                // This is a batch delete
                 const batchId = $row.data('batch-id');
                 this.showDeleteConfirmation('batch', batchId);
             } else if ($target.data('product-id')) {
-                // This is a product delete from manage modal
                 const productId = $target.data('product-id');
                 const productName = $target.data('product-name') || 'Product';
                 this.showDeleteConfirmation('product', productId, productName);
             } else if ($target.data('category-id')) {
-                // This is a category delete from manage modal
                 const categoryId = $target.data('category-id');
                 const categoryName = $target.data('category-name') || 'Category';
                 this.showDeleteConfirmation('category', categoryId, categoryName);
             } else if ($target.data('quality-id')) {
-                // This is a quality delete from manage modal
                 const qualityId = $target.data('quality-id');
                 const qualityName = $target.data('quality-name') || 'Quality';
                 this.showDeleteConfirmation('quality', qualityId, qualityName);
             }
         });
         
-        // Complete button
         $(document).on('click', '.btn-complete', function() {
             const batchId = $(this).closest('tr').data('batch-id');
             ProductionManager.openCostModal(batchId);
         });
     },
 
-    // Cost modal methods
     openCostModal: function(batchId) {
         $('#cost_batch_id').val(batchId);
         $('#costForm')[0].reset();
@@ -189,7 +80,7 @@ const ProductionManager = {
     },
 
     completeBatchWithCost: function(e) {
-        e.preventDefault(); // This prevents the page refresh
+        e.preventDefault();
         
         const batchId = $('#cost_batch_id').val();
         const formData = {
@@ -198,7 +89,6 @@ const ProductionManager = {
             _token: $('meta[name="csrf-token"]').attr('content')
         };
         
-        // Validation
         if (!formData.labor_cost || formData.labor_cost.trim() === '') {
             this.showErrorToast('Labor cost is required');
             $('#cost_labor_cost').focus();
@@ -254,12 +144,6 @@ const ProductionManager = {
         });
     },
 
-    initializeDatePickers: function() {
-        const today = new Date().toISOString().split('T')[0];
-        $('#start_date').attr('min', today);
-        $('#expected_completion').attr('min', today);
-    },
-
     loadBatches: function(page = 1) {
         const search = $('#searchInput').val();
         const status = $('#filterStatus').val();
@@ -275,7 +159,6 @@ const ProductionManager = {
             data: { search, status: statusParam, page, per_page: perPage, ajax: true },
             success: (response) => {
                 if (response.success) {
-                    // 🔥 SET pagination state HERE
                     this.currentPage = response.pagination.current_page;
                     this.perPage = response.pagination.per_page;
 
@@ -301,35 +184,100 @@ const ProductionManager = {
     renderBatches: function(paginatedData) {
         const batches = paginatedData.data || paginatedData.batches || paginatedData;
         
-        // Check if we have data
         if (!batches || batches.length === 0) {
             $('#batchBody').html(this.emptyStateTemplate('No batches found', 'bi-inbox'));
-            $('#batchPagination').empty(); // Clear pagination
+            $('#batchPagination').empty();
             return;
         }
         
-        // Render table rows
         const html = batches.map((batch, index) => this.batchRowTemplate(batch, index)).join('');
         $('#batchBody').html(html);
 
-        // Render pagination if we have pagination metadata
         if (paginatedData.current_page !== undefined) {
             this.renderPagination(paginatedData);
         } else if (paginatedData.pagination) {
-            // Handle if pagination data is in a different format
             this.renderPagination(paginatedData.pagination);
         }
+    },
+
+    renderPagination: function(paginatedData) {
+        const currentPage = paginatedData.current_page || 1;
+        const lastPage = paginatedData.last_page || 1;
+        const $pagination = $('#batchPagination');
+        
+        $pagination.empty();
+
+        if (lastPage <= 1) return;
+
+        let paginationHtml = '';
+
+        paginationHtml += `
+            <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" data-page="${currentPage - 1}">&laquo; Previous</a>
+            </li>
+        `;
+
+        const maxVisible = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+        let endPage = Math.min(lastPage, startPage + maxVisible - 1);
+        
+        if (endPage - startPage + 1 < maxVisible) {
+            startPage = Math.max(1, endPage - maxVisible + 1);
+        }
+
+        if (startPage > 1) {
+            paginationHtml += `
+                <li class="page-item">
+                    <a class="page-link" href="#" data-page="1">1</a>
+                </li>
+            `;
+            if (startPage > 2) {
+                paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            paginationHtml += `
+                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" data-page="${i}">${i}</a>
+                </li>
+            `;
+        }
+
+        if (endPage < lastPage) {
+            if (endPage < lastPage - 1) {
+                paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+            paginationHtml += `
+                <li class="page-item">
+                    <a class="page-link" href="#" data-page="${lastPage}">${lastPage}</a>
+                </li>
+            `;
+        }
+
+        paginationHtml += `
+            <li class="page-item ${currentPage === lastPage ? 'disabled' : ''}">
+                <a class="page-link" href="#" data-page="${currentPage + 1}">Next &raquo;</a>
+            </li>
+        `;
+
+        $pagination.html(paginationHtml);
+
+        $pagination.find('a.page-link').off('click').on('click', (e) => {
+            e.preventDefault();
+            const page = $(e.currentTarget).data('page');
+            if (page && page > 0 && page <= lastPage && page !== currentPage) {
+                this.loadBatches(page);
+            }
+        });
     },
 
     batchRowTemplate: function(batch, index) {
         const status = batch.status;
         const statusClass = status.toLowerCase().replace(/\s+/g, '-');
-
         const startDate = this.formatDate(batch.start_date);
         const completionDate = this.formatDate(batch.expected_completion);
-
         const isEditable = status === 'Pending' || status === 'Delayed';
-
         const sn = (this.currentPage - 1) * this.perPage + index + 1;
 
         return `
@@ -401,10 +349,8 @@ const ProductionManager = {
             url: '/admin/batchproducts',
             method: 'GET',
             success: (data) => {
-                // Update batch modal dropdown
                 this.updateSelectOptions('#batchproduct_id', data, 'Select Product');
                 
-                // Update product table
                 const html = data.map((product, index) => `
                     <tr>
                         <td>${index + 1}</td>
@@ -433,10 +379,8 @@ const ProductionManager = {
             url: '/admin/productcategories',
             method: 'GET',
             success: (data) => {
-                // Update all category dropdowns
                 this.updateSelectOptions('#productcategory_id', data, 'Select Category');
                 
-                // Update categories table
                 const html = data.map((category, index) => `
                     <tr>
                         <td>${index + 1}</td>
@@ -461,10 +405,8 @@ const ProductionManager = {
             url: '/admin/productqualities',
             method: 'GET',
             success: (data) => {
-                // Update all quality dropdowns
                 this.updateSelectOptions('#productquality_id', data, 'Select Quality');
                 
-                // Update qualities table
                 const html = data.map((quality, index) => `
                     <tr>
                         <td>${index + 1}</td>
@@ -495,14 +437,12 @@ const ProductionManager = {
                 $select.append(`<option value="${item.id}">${item.name}</option>`);
             });
             
-            // Restore previous selection if it still exists
             if (currentValue && data.some(item => item.id == currentValue)) {
                 $select.val(currentValue);
             }
         }
     },
 
-    // FIXED: Add category with proper button reset
     addCategory: function(e) {
         e.preventDefault();
         const formData = $('#addCategoryForm').serialize();
@@ -519,12 +459,9 @@ const ProductionManager = {
             headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
             success: (response) => {
                 if (response.success) {
-                    // Reload categories to update dropdowns and table
                     this.loadCategories();
                     $('#addCategoryForm')[0].reset();
                     this.showSuccessToast('Category added successfully!');
-                    
-                    // Switch to manage tab
                     this.switchToManageTab('addCategoryModal', 'manageCategoriesTab');
                 } else {
                     this.showErrorToast(response.message || 'Failed to add category');
@@ -549,7 +486,6 @@ const ProductionManager = {
         });
     },
 
-    // FIXED: Add quality with proper button reset
     addQuality: function(e) {
         e.preventDefault();
         const formData = $('#addQualityForm').serialize();
@@ -566,12 +502,9 @@ const ProductionManager = {
             headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
             success: (response) => {
                 if (response.success) {
-                    // Reload qualities to update dropdowns and table
                     this.loadQualities();
                     $('#addQualityForm')[0].reset();
                     this.showSuccessToast('Quality added successfully!');
-                    
-                    // Switch to manage tab
                     this.switchToManageTab('addQualityModal', 'manageQualitiesTab');
                 } else {
                     this.showErrorToast(response.message || 'Failed to add quality');
@@ -596,7 +529,6 @@ const ProductionManager = {
         });
     },
 
-    // FIXED: Add product with proper button reset
     addProduct: function(e) {
         e.preventDefault();
         const formData = $('#addProductForm').serialize();
@@ -613,12 +545,9 @@ const ProductionManager = {
             headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
             success: (response) => {
                 if (response.success) {
-                    // Reload products to update dropdowns and table
                     this.loadProducts();
                     $('#addProductForm')[0].reset();
                     this.showSuccessToast('Product added successfully!');
-                    
-                    // Switch to manage tab
                     this.switchToManageTab('addProductModal', 'manageProductsTab');
                 } else {
                     this.showErrorToast(response.message || 'Failed to add product');
@@ -643,7 +572,6 @@ const ProductionManager = {
         });
     },
 
-    // Helper to switch to manage tab
     switchToManageTab: function(modalId, tabId) {
         const modal = $(`#${modalId}`);
         modal.find('.tab-content').removeClass('active');
@@ -657,14 +585,12 @@ const ProductionManager = {
         const form = $('#batchForm');
         const batchId = $('#batch_id').val();
         
-        // Always use POST method for Laravel
         let url = '/admin/addbatches';
         let httpMethod = 'POST';
         
-        // If we have a batchId, we're updating
         if (batchId) {
             url = `/admin/updatebatches/${batchId}`;
-            httpMethod = 'POST';  // Keep as POST
+            httpMethod = 'POST';
         }
         
         const formData = form.serialize();
@@ -711,26 +637,19 @@ const ProductionManager = {
     },
 
     editBatch: function(batchId) {
-        console.log('Edit batch clicked, ID:', batchId); // Debug log
-        
         $.ajax({
             url: `/admin/batch-data/${batchId}`,
             method: 'GET',
             dataType: 'json',
             success: (response) => {
-                console.log('Batch data response:', response); // Debug log
-                
                 if (response.success && response.batch) {
                     const batch = response.batch;
-                    console.log('Batch data loaded:', batch); // Debug log
                     
-                    // Fill form fields
                     $('#batch_id').val(batch.id);
                     $('#batchproduct_id').val(batch.batchproduct_id);
                     $('#leader_name').val(batch.leader_name);
                     $('#quantity').val(batch.quantity);
                     
-                    // Format dates
                     if (batch.start_date) {
                         $('#start_date').val(batch.start_date.split('T')[0]);
                     }
@@ -738,26 +657,20 @@ const ProductionManager = {
                         $('#expected_completion').val(batch.expected_completion.split('T')[0]);
                     }
                     
-                    // Update modal title and button
+                    // Remove date validation for EDIT mode
+                    $('#start_date').removeAttr('min');
+                    $('#expected_completion').removeAttr('min');
+                    
                     $('#modalTitle').text('Edit Batch');
                     $('#submitBtn').text('Update Batch');
                     $('#formMethod').val('PUT');
                     
-                    // Open modal
                     ModalManager.open('batchModal');
                 } else {
-                    console.error('Failed to load batch data:', response);
                     this.showErrorToast(response.message || 'Failed to load batch data');
                 }
             },
-            error: (xhr, status, error) => {
-                console.error('AJAX error:', {
-                    status: xhr.status,
-                    statusText: xhr.statusText,
-                    responseText: xhr.responseText,
-                    error: error
-                });
-                
+            error: (xhr) => {
                 let errorMessage = 'Failed to load batch data';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMessage = xhr.responseJSON.message;
@@ -767,7 +680,6 @@ const ProductionManager = {
         });
     },
 
-    // SINGLE SWEETALERT DELETE CONFIRMATION FOR ALL TYPES
     showDeleteConfirmation: function(type, id, name = '') {
         const config = {
             'batch': {
@@ -841,7 +753,6 @@ const ProductionManager = {
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                // Success - show toast and reload data
                 Swal.fire({
                     icon: 'success',
                     title: 'Deleted!',
@@ -852,13 +763,11 @@ const ProductionManager = {
                     position: 'top-end'
                 });
                 
-                // Execute the appropriate callback
                 itemConfig.successCallback();
             }
         });
     },
 
-    // Helper methods
     showLoader: function(selector) {
         $(selector).html(this.loadingTemplate());
     },
@@ -955,8 +864,11 @@ const ModalManager = {
         $('#' + modalId).hide();
         $('body').css('overflow', 'auto');
         
-        // Reset forms and button states
         if (modalId === 'batchModal') {
+            // Remove date validation when closing modal
+            $('#start_date').removeAttr('min');
+            $('#expected_completion').removeAttr('min');
+            
             $('#batchForm')[0].reset();
             $('#batch_id').val('');
             $('#modalTitle').text('Add New Batch');
@@ -989,11 +901,15 @@ const ModalManager = {
     }
 };
 
-// Global functions
 function openBatchModal(batchId = null) {
     if (batchId) {
         ProductionManager.editBatch(batchId);
     } else {
+        // For ADD mode - set date validation
+        const today = new Date().toISOString().split('T')[0];
+        $('#start_date').attr('min', today);
+        $('#expected_completion').attr('min', today);
+        
         $('#modalTitle').text('Add New Batch');
         $('#submitBtn').text('Add Batch');
         $('#formMethod').val('POST');
