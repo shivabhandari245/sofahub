@@ -246,6 +246,14 @@
             <div class="kpi-subtitle">All-time sales amount</div>
         </div>
 
+<div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-icon"><i class="fas fa-coins"></i></div>
+            <div class="kpi-title">Total Profit</div>
+            <div class="kpi-value">NPR {{ number_format($totalProfit,2) }}</div>
+            <div class="kpi-subtitle">All-time profit</div>
+        </div>
+</div>
         <div class="kpi-card">
             <div class="kpi-icon"><i class="fas fa-receipt"></i></div>
             <div class="kpi-title">Total Invoices</div>

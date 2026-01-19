@@ -146,8 +146,17 @@
                 <i class="fas fa-coins"></i>
                 <h6>Total Revenue</h6>
                 <h2>RS {{ number_format($totalRevenue, 2) }}</h2>
-            </div>
+           </div>
         </div>
+
+         <div class="col-6 col-md-3">
+            <div class="stats-card">
+                <i class="fas fa-coins"></i>
+                <h6>Total Profit</h6>
+                <h2>RS {{ number_format($totalProfit, 2) }}</h2>
+           </div>
+        </div>
+        
         <div class="col-6 col-md-3">
             <div class="stats-card">
                 <i class="fas fa-percent"></i>

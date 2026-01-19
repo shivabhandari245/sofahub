@@ -24,7 +24,7 @@ class DashboardController extends Controller
         
         // Total Invoices
         $totalInvoices = Sale::where('user_id', $userId)->count();
-
+        $totalProfit = Sale::where('user_id', $userId)->sum('profit');
         // Top Selling Product
         $topProduct = SaleItem::select('product_id', DB::raw('SUM(quantity) as total_qty'))
             ->whereHas('sale', fn($q) => $q->where('user_id', $userId))
@@ -104,6 +104,7 @@ class DashboardController extends Controller
         }
 
         return view('user.userproducts.dashboard', compact(
+             'totalProfit',
             'totalSales',
             'totalInvoices',
             'topProduct',

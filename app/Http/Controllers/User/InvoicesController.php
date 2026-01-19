@@ -31,7 +31,7 @@ public function index(Request $request)
     $totalRevenue = $invoices->sum('total_amount');
     $totalTax = $invoices->sum('tax_amount');
     $totalDiscount = $invoices->sum('discount');
-
+    $totalProfit = $invoices->sum('profit');
     // Paid invoices (fully paid)
     $paidInvoices = $invoices->where('payment_status', 'paid');
     $totalPaidCount = $paidInvoices->count();
@@ -52,6 +52,7 @@ public function index(Request $request)
         'months'                 => $months,
         'totalInvoices'          => $totalInvoices,
         'totalRevenue'           => $totalRevenue,
+        'totalProfit'            => $totalProfit,
         'totalTax'               => $totalTax,
         'totalDiscount'          => $totalDiscount,
         'totalPaidCount'         => $totalPaidCount,
