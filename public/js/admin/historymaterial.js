@@ -31,16 +31,7 @@ $(document).ready(function () {
         $(this).addClass('active').siblings().removeClass('active');
     });
 
-    /* ================= PRINT ================= */
-    $('#printHistory').on('click', function () {
-        window.print();
-    });
 
-    /* ================= EXPORT CSV ================= */
-    $('#exportCSV').on('click', function () {
-        const materialId = $(this).data('id');
-        window.location.href = `/admin/rawmaterials/${materialId}/export-history`;
-    });
 
     /* ================= RESTOCK MODAL ================= */
     let restockModal = new bootstrap.Modal(

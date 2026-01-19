@@ -130,4 +130,46 @@ class AdminDashboardController extends Controller
             'customers'
         ));
     }
+
+     public function stockAlerts()
+    {
+        $lowRawMaterials = RawMaterialModel::where('quantity', '<', 11)
+            ->with(['category', 'unit'])
+            ->get()
+            ->map(function ($material) {
+                return [
+                    'id' => $material->id,
+                    'name' => $material->name,
+                    'category' => $material->category->name ?? null,
+                    'quantity' => $material->quantity,
+                    'unit' => $material->unit->name ?? null,
+                    'min_stock_level' => $material->min_stock_level,
+                    'status' => $material->quantity == 0
+                        ? 'Out of Stock'
+                        : ($material->quantity < 6 ? 'Critical' : 'Low Stock')
+                ];
+            });
+
+        $lowProducts = ProductModel::where('quantity', '<=', 5)
+            ->with(['category', 'quality'])
+            ->get()
+            ->map(function ($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'category' => $product->category->name ?? null,
+                    'quality' => $product->quality->name ?? null,
+                    'quantity' => $product->quantity,
+                    'status' => $product->quantity == 0
+                        ? 'Out of Stock'
+                        : ($product->quantity < 3 ? 'Critical' : 'Low Stock')
+                ];
+            });
+
+        return response()->json([
+            'raw_materials' => $lowRawMaterials,
+            'products' => $lowProducts,
+            'timestamp' => now()->toDateTimeString()
+        ]);
+    }
 }

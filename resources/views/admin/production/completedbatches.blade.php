@@ -1,5 +1,4 @@
 @extends('layouts.admin')
-
 @section('title', 'Completed Batches')
 
 @section('content')
@@ -63,8 +62,7 @@
                     </tbody>
                 </table>
                 <!-- Pagination will be injected here -->
-                    <div id="paginationControls" class="mt-3"></div>
-
+                <div id="paginationControls" class="mt-3"></div>
             </div>
         </div>
     </div>
@@ -124,28 +122,43 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-        let currentPage = 1;
-        const perPage = 10;
-
-        $(document).ready(function () {
-            loadCompletedBatches();
-
+    // ==================== Completed Batches Manager ====================
+    const CompletedBatchesManager = {
+        currentPage: 1,
+        perPage: 10,
+        
+        init: function() {
+            this.loadCompletedBatches();
+            this.setupEventListeners();
+        },
+        
+        setupEventListeners: function() {
+            // Search with debounce
             let searchTimer;
-            $('#searchInput').on('keyup', function () {
+            $('#searchInput').on('keyup', () => {
                 clearTimeout(searchTimer);
-                searchTimer = setTimeout(() => loadCompletedBatches(1), 500);
+                searchTimer = setTimeout(() => this.loadCompletedBatches(1), 500);
             });
-        });
-
-        function loadCompletedBatches(page = 1) {
-            currentPage = page;
+            
+            // Delete button click using event delegation
+            $(document).on('click', '.btn-delete', (e) => {
+                e.stopPropagation();
+                const batchId = $(e.currentTarget).data('batch-id');
+                if (batchId) {
+                    this.showDeleteConfirmation(batchId);
+                }
+            });
+        },
+        
+        loadCompletedBatches: function(page = 1) {
+            this.currentPage = page;
             const search = $('#searchInput').val();
-
+            
             $.ajax({
                 url: '/admin/viewcompletedbatches',
                 method: 'GET',
                 data: { search, page, ajax: true },
-                beforeSend: function() {
+                beforeSend: () => {
                     $('#batchBody').html(`
                         <tr>
                             <td colspan="12" class="text-center py-5">
@@ -156,7 +169,7 @@
                         </tr>
                     `);
                 },
-                success: function (res) {
+                success: (res) => {
                     if (!res.batches || res.batches.length === 0) {
                         $('#batchBody').html(`
                             <tr>
@@ -171,44 +184,12 @@
                         $('#paginationControls').html('');
                         return;
                     }
-
+                    
                     $('#batchCount').text(res.total);
-
-                    let html = '';
-                    let sn = (res.current_page - 1) * res.per_page + 1;
-
-                    res.batches.forEach(batch => {
-                        html += `
-                            <tr class="batch-row" data-batch-id="${batch.id}">
-                                <td class="ps-3 fw-medium">${sn++}</td>
-                                <td>${batch.product?.name ?? '-'}</td>
-                                <td>${batch.product?.category?.name ?? '-'}</td>
-                                <td>${batch.product?.quality?.name ?? '-'}</td>
-                                <td>${batch.leader_name}</td>
-                                <td>${batch.quantity}</td>
-                                <td>NPR ${Number(batch.expected_unit_cost).toFixed(2)}</td>
-                                <td>NPR ${Number(batch.total_cost).toFixed(2)}</td>
-                                <td>${formatDate(batch.start_date)}</td>
-                                <td>${formatDate(batch.updated_at)}</td>
-                                <td>
-                                    <span class="status-badge bg-success bg-opacity-10 text-success">
-                                        <i class="bi bi-check-circle me-1"></i> Completed
-                                    </span>
-                                </td>
-                                <td class="text-center pe-3">
-                                    <button class="btn btn-action btn-outline-danger btn-delete" 
-                                            title="Delete Batch" data-batch-id="${batch.id}">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        `;
-                    });
-
-                    $('#batchBody').html(html);
-                    renderPagination(res.current_page, res.last_page);
+                    this.renderBatches(res);
+                    this.renderPagination(res.current_page, res.last_page);
                 },
-                error: function () {
+                error: () => {
                     $('#batchBody').html(`
                         <tr>
                             <td colspan="12" class="text-center py-5">
@@ -221,49 +202,201 @@
                     `);
                 }
             });
-        }
-
-        // ==================== Pagination Buttons ====================
-        function renderPagination(current, last) {
+        },
+        
+        renderBatches: function(response) {
+            let html = '';
+            const batches = response.batches;
+            const sn = (response.current_page - 1) * response.per_page + 1;
+            
+            batches.forEach((batch, index) => {
+                html += `
+                    <tr class="batch-row" data-batch-id="${batch.id}">
+                        <td class="ps-3 fw-medium">${sn + index}</td>
+                        <td>${batch.product?.name ?? '-'}</td>
+                        <td>${batch.product?.category?.name ?? '-'}</td>
+                        <td>${batch.product?.quality?.name ?? '-'}</td>
+                        <td>${batch.leader_name}</td>
+                        <td>${batch.quantity}</td>
+                        <td>NPR ${Number(batch.expected_unit_cost).toFixed(2)}</td>
+                        <td>NPR ${Number(batch.total_cost).toFixed(2)}</td>
+                        <td>${this.formatDate(batch.start_date)}</td>
+                        <td>${this.formatDate(batch.updated_at)}</td>
+                        <td>
+                            <span class="status-badge bg-success bg-opacity-10 text-success">
+                                <i class="bi bi-check-circle me-1"></i> Completed
+                            </span>
+                        </td>
+                        <td class="text-center pe-3">
+                            <button class="btn btn-action btn-outline-danger btn-delete" 
+                                    title="Delete Batch" 
+                                    data-batch-id="${batch.id}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            $('#batchBody').html(html);
+        },
+        
+        renderPagination: function(current, last) {
             if (last <= 1) {
                 $('#paginationControls').html('');
                 return;
             }
-
+            
             let html = `<nav><ul class="pagination justify-content-center">`;
-
+            
             html += `
                 <li class="page-item ${current === 1 ? 'disabled' : ''}">
-                    <a class="page-link" href="javascript:void(0)" onclick="loadCompletedBatches(${current - 1})">Prev</a>
+                    <a class="page-link" href="javascript:void(0)" onclick="CompletedBatchesManager.loadCompletedBatches(${current - 1})">Prev</a>
                 </li>
             `;
-
-            for (let i = 1; i <= last; i++) {
+            
+            const maxVisible = 5;
+            let startPage = Math.max(1, current - Math.floor(maxVisible / 2));
+            let endPage = Math.min(last, startPage + maxVisible - 1);
+            
+            if (endPage - startPage + 1 < maxVisible) {
+                startPage = Math.max(1, endPage - maxVisible + 1);
+            }
+            
+            if (startPage > 1) {
+                html += `
+                    <li class="page-item">
+                        <a class="page-link" href="javascript:void(0)" onclick="CompletedBatchesManager.loadCompletedBatches(1)">1</a>
+                    </li>
+                `;
+                if (startPage > 2) {
+                    html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
                 html += `
                     <li class="page-item ${i === current ? 'active' : ''}">
-                        <a class="page-link" href="javascript:void(0)" onclick="loadCompletedBatches(${i})">${i}</a>
+                        <a class="page-link" href="javascript:void(0)" onclick="CompletedBatchesManager.loadCompletedBatches(${i})">${i}</a>
                     </li>
                 `;
             }
-
+            
+            if (endPage < last) {
+                if (endPage < last - 1) {
+                    html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+                html += `
+                    <li class="page-item">
+                        <a class="page-link" href="javascript:void(0)" onclick="CompletedBatchesManager.loadCompletedBatches(${last})">${last}</a>
+                    </li>
+                `;
+            }
+            
             html += `
                 <li class="page-item ${current === last ? 'disabled' : ''}">
-                    <a class="page-link" href="javascript:void(0)" onclick="loadCompletedBatches(${current + 1})">Next</a>
+                    <a class="page-link" href="javascript:void(0)" onclick="CompletedBatchesManager.loadCompletedBatches(${current + 1})">Next</a>
                 </li>
             `;
-
+            
             html += `</ul></nav>`;
-
             $('#paginationControls').html(html);
-        }
-
-        // ==================== Helper ====================
-        function formatDate(date) {
+        },
+        
+        // SINGLE SWEETALERT DELETE CONFIRMATION
+        showDeleteConfirmation: function(batchId) {
+            // First get batch details to show in confirmation
+            $.ajax({
+                url: `/admin/batch-data/${batchId}`,
+                method: 'GET',
+                dataType: 'json',
+                success: (response) => {
+                    let batchName = ' Batch';
+                    let quantity = '';
+                    
+                    if (response.success && response.batch) {
+                        const batch = response.batch;
+                        batchName = batch.product?.name || ' Product';
+                        quantity = batch.quantity;
+                    }
+                    
+                    this.showDeleteDialog(batchId, batchName, quantity);
+                },
+                error: () => {
+                    // If can't get details, use generic
+                    this.showDeleteDialog(batchId, 'Batch', '');
+                }
+            });
+        },
+        
+        showDeleteDialog: function(batchId, batchName, quantity) {
+            const quantityText = quantity ? ` (Quantity: ${quantity})` : '';
+            
+            Swal.fire({
+                title: 'Delete Completed Batch?',
+                html: `<div style="text-align: left;">
+                    <p>Are you sure you want to delete <strong>"${batchName}"${quantityText}</strong>?</p>
+                    <p class="text-danger" style="font-size: 0.9em; margin-top: 10px;">
+                        <i class="bi bi-exclamation-triangle"></i> This action cannot be undone.
+                    </p>
+                </div>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true,
+                showLoaderOnConfirm: true,
+                preConfirm: () => {
+                    return $.ajax({
+                        url: `/admin/deletebatches/${batchId}`,
+                        method: 'DELETE',
+                        headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
+                        dataType: 'json'
+                    }).then(response => {
+                        if (!response.success) {
+                            throw new Error(response.message || 'Failed to delete batch');
+                        }
+                        return response;
+                    }).catch(error => {
+                        Swal.showValidationMessage(
+                            `Delete failed: ${error.statusText || error.responseJSON?.message || 'Unknown error'}`
+                        );
+                    });
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Success - show toast and reload
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Deleted!',
+                        text: 'Batch deleted successfully!',
+                        timer: 2000,
+                        showConfirmButton: false,
+                        toast: true,
+                        position: 'top-end'
+                    });
+                    
+                    // Reload the batches
+                    this.loadCompletedBatches(this.currentPage);
+                }
+            });
+        },
+        
+        formatDate: function(date) {
             if (!date) return '-';
             return new Date(date).toLocaleDateString('en-US', {
-                year: 'numeric', month: 'short', day: 'numeric'
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric'
             });
         }
-
+    };
+    
+    // Initialize on page load
+    $(document).ready(function() {
+        CompletedBatchesManager.init();
+    });
 </script>
 @endpush

@@ -304,14 +304,7 @@
                                 Showing {{ $history->count() }} of {{ $history->count() }} records
                             </small>
                         </div>
-                        <div>
-                            <button class="btn btn-outline-primary btn-sm" id="printHistory">
-                                <i class="fas fa-print"></i> Print
-                            </button>
-                            <button class="btn btn-outline-success btn-sm" id="exportCSV">
-                                <i class="fas fa-file-csv"></i> Export CSV
-                            </button>
-                        </div>
+
                     </div>
                 </div>
             @endif

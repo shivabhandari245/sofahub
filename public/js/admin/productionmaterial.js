@@ -1,251 +1,272 @@
-// production-materials.js
+// productionmaterial.js - Optimized Version
 class ProductionMaterials {
     constructor() {
-this.batchproductId = window.batchproductId;
+        this.batchproductId = window.batchproductId;
         this.currentMaterials = [];
+        this.allocatedMaterials = new Map(); // Use Map for faster lookups
         this.isUpdateMode = false;
+        this.materialsCache = new Map(); // Cache materials by category
         
         this.initElements();
         this.bindEvents();
-        this.initPage();
+        this.loadInitialData();
     }
 
     initElements() {
-        // DOM Elements
-        this.$categorySelect = $('#material_category');
-        this.$searchInput = $('#searchMaterial');
-        this.$materialsTableBody = $('#availableMaterialsTable tbody');
-        this.$quantityModal = $('#quantityModal');
-        this.$allocateQuantity = $('#allocateQuantity');
-        this.$confirmAllocationBtn = $('#confirmAllocation');
-        this.$allocatedTable = $('#allocatedTable');
-        this.$confirmBtn = $('#confirmBtn');
-        this.$selectedCount = $('#selectedCount');
-        this.$totalCost = $('#totalCost');
+        // Cache DOM elements
+        this.elements = {
+            categorySelect: $('#material_category'),
+            searchInput: $('#searchMaterial'),
+            materialsTableBody: $('#availableMaterialsTable tbody'),
+            quantityModal: $('#quantityModal'),
+            allocateQuantity: $('#allocateQuantity'),
+            confirmAllocationBtn: $('#confirmAllocation'),
+            allocatedTable: $('#allocatedTable'),
+            confirmBtn: $('#confirmBtn'),
+            selectedCount: $('#selectedCount'),
+            totalCost: $('#totalCost'),
+            modalTitle: $('.modal-title'),
+            modalMaterialName: $('#modalMaterialName'),
+            modalMaterialDetails: $('#modalMaterialDetails'),
+            availableStockDisplay: $('#availableStockDisplay')
+        };
     }
 
     bindEvents() {
-        // Category and search
-        this.$categorySelect.on('change', () => this.handleCategoryChange());
-        this.$searchInput.on('input', () => this.handleSearch());
+        const { categorySelect, searchInput, confirmAllocationBtn, quantityModal } = this.elements;
         
-        // Modal buttons
-        this.$confirmAllocationBtn.on('click', () => this.handleAllocationConfirm());
+        // Use debounced events for better performance
+        categorySelect.on('change', () => this.handleCategoryChange());
+        searchInput.on('input', this.debounce(() => this.handleSearch(), 300));
         
-        // Dynamic event delegation
-        $(document).on('click', '.allocateBtn', (e) => this.handleAllocateClick(e));
-        $(document).on('click', '.deleteBtn', (e) => this.handleDeleteClick(e));
+        confirmAllocationBtn.on('click', () => this.handleAllocationConfirm());
         
-        // Modal close reset
-        this.$quantityModal.on('hidden.bs.modal', () => this.resetModal());
+        // Event delegation with event namespacing
+        $(document)
+            .off('.productionMaterials')
+            .on('click.productionMaterials', '.allocateBtn', (e) => this.handleAllocateClick(e))
+            .on('click.productionMaterials', '.deleteBtn', (e) => this.handleDeleteClick(e));
+        
+        quantityModal.on('hidden.bs.modal', () => this.resetModal());
     }
 
-    initPage() {
-        this.$searchInput.prop('disabled', true);
-        this.fetchAllocatedMaterials();
+    async loadInitialData() {
+        try {
+            // Load allocated materials and available categories simultaneously
+            const [allocatedResponse] = await Promise.all([
+                this.fetchAllocatedMaterials()
+            ]);
+            
+            // Disable search initially
+            this.elements.searchInput.prop('disabled', true);
+        } catch (error) {
+            console.error('Initialization error:', error);
+            this.showError('Failed to initialize page');
+        }
     }
 
     // ========== AVAILABLE MATERIALS SECTION ==========
 
-    handleCategoryChange() {
-        const categoryId = this.$categorySelect.val();
+    async handleCategoryChange() {
+        const categoryId = this.elements.categorySelect.val();
+        
         if (!categoryId) {
             this.resetMaterialsTable();
-            this.$searchInput.prop('disabled', true);
+            this.elements.searchInput.prop('disabled', true);
             return;
         }
         
-        this.fetchMaterialsByCategory(categoryId);
+        await this.fetchMaterialsByCategory(categoryId);
     }
 
-    fetchMaterialsByCategory(categoryId) {
+    async fetchMaterialsByCategory(categoryId) {
+        // Check cache first
+        if (this.materialsCache.has(categoryId)) {
+            const cached = this.materialsCache.get(categoryId);
+            this.currentMaterials = cached;
+            this.populateMaterialsTable(cached);
+            this.elements.searchInput.prop('disabled', false);
+            return;
+        }
+        
         this.showLoading('#availableMaterialsTable tbody', 'Loading materials...');
         
-        $.ajax({
-            url: `/admin/raw-materials/by-category/${categoryId}`,
-            type: 'GET',
-            success: (response) => {
-                if (response.success && response.materials?.length > 0) {
-                    this.currentMaterials = response.materials;
-                    this.populateMaterialsTable(this.currentMaterials);
-                    this.$searchInput.prop('disabled', false);
-                } else {
-                    this.showEmptyTable('No materials found for this category');
-                }
-            },
-            error: (xhr) => {
-                console.error('Error loading materials:', xhr);
-                this.showError('Failed to load materials. Please try again.');
-                this.showEmptyTable('Error loading materials');
+        try {
+            const response = await $.ajax({
+                url: `/admin/raw-materials/by-category/${categoryId}`,
+                type: 'GET',
+                cache: true
+            });
+            
+            if (response.success && response.materials?.length > 0) {
+                this.currentMaterials = response.materials;
+                // Cache the results
+                this.materialsCache.set(categoryId, response.materials);
+                this.populateMaterialsTable(this.currentMaterials);
+                this.elements.searchInput.prop('disabled', false);
+            } else {
+                this.showEmptyTable('No materials found for this category');
             }
-        });
+        } catch (xhr) {
+            console.error('Error loading materials:', xhr);
+            this.showError('Failed to load materials. Please try again.');
+            this.showEmptyTable('Error loading materials');
+        }
     }
 
     handleSearch() {
-        const term = this.$searchInput.val().toLowerCase();
-        const filtered = this.currentMaterials.filter(m => {
-            return m.name.toLowerCase().includes(term) ||
-                   (m.supplier?.name?.toLowerCase().includes(term)) ||
-                   (m.storage_location?.toLowerCase().includes(term));
-        });
+        const term = this.elements.searchInput.val().toLowerCase();
+        if (!term.trim()) {
+            this.populateMaterialsTable(this.currentMaterials);
+            return;
+        }
+        
+        // Use simple string matching for speed
+        const filtered = this.currentMaterials.filter(m => 
+            m.name.toLowerCase().includes(term) ||
+            (m.supplier?.name?.toLowerCase()?.includes(term)) ||
+            (m.storage_location?.toLowerCase()?.includes(term))
+        );
+        
         this.populateMaterialsTable(filtered);
     }
 
     populateMaterialsTable(materials) {
-        this.$materialsTableBody.empty();
+        const tbody = this.elements.materialsTableBody;
+        tbody.empty();
         
         if (!materials || materials.length === 0) {
             this.showEmptyTable('No materials found');
             return;
         }
 
+        // Use DocumentFragment for better performance
+        const fragment = document.createDocumentFragment();
+        
         materials.forEach(material => {
-            const supplier = material.supplier?.name || 'N/A';
-            const unit = material.unit?.name || '';
-            const category = material.category?.name || 'Unknown';
-            const quantity = material.quantity || 0;
-            const unitCost = parseFloat(material.unit_cost || 0).toFixed(2);
-            const isDisabled = quantity <= 0;
-            
-            const row = `
-                <tr>
-                    <td>${this.escapeHtml(material.name)}</td>
-                    <td>${this.escapeHtml(supplier)}</td>
-                    <td><span class="badge ${quantity > 0 ? 'bg-success' : 'bg-danger'}">${quantity} ${this.escapeHtml(unit)}</span></td>
-                    <td>${this.escapeHtml(unit)}</td>
-                    <td>Rs ${unitCost}</td>
-                    <td>${this.escapeHtml(material.storage_location || 'N/A')}</td>
-                    <td>
-                        <button class="btn btn-primary btn-sm allocateBtn" 
-                            data-id="${material.id}"
-                            data-name="${this.escapeHtml(material.name)}"
-                            data-stock="${quantity}"
-                            data-unit="${this.escapeHtml(unit)}"
-                            data-cost="${unitCost}"
-                            data-category="${this.escapeHtml(category)}"
-                            ${isDisabled ? 'disabled' : ''}>
-                            <i class="fas fa-plus"></i> Allocate
-                        </button>
-                    </td>
-                </tr>
-            `;
-            this.$materialsTableBody.append(row);
+            const row = this.createMaterialRow(material);
+            fragment.appendChild(row);
         });
+        
+        tbody[0].appendChild(fragment);
+    }
+
+    createMaterialRow(material) {
+        const tr = document.createElement('tr');
+        const supplier = material.supplier?.name || 'N/A';
+        const unit = material.unit?.name || '';
+        const quantity = material.quantity || 0;
+        const unitCost = parseFloat(material.unit_cost || 0).toFixed(2);
+        const isDisabled = quantity <= 0;
+        
+        tr.innerHTML = `
+            <td>${this.escapeHtml(material.name)}</td>
+            <td>${this.escapeHtml(supplier)}</td>
+            <td><span class="badge ${quantity > 0 ? 'bg-success' : 'bg-danger'}">${quantity} ${this.escapeHtml(unit)}</span></td>
+            <td>${this.escapeHtml(unit)}</td>
+            <td>Rs ${unitCost}</td>
+            <td>${this.escapeHtml(material.storage_location || 'N/A')}</td>
+            <td>
+                <button class="btn btn-primary btn-sm allocateBtn" 
+                    data-id="${material.id}"
+                    data-name="${this.escapeHtml(material.name)}"
+                    data-stock="${quantity}"
+                    data-unit="${this.escapeHtml(unit)}"
+                    data-cost="${unitCost}"
+                    ${isDisabled ? 'disabled' : ''}>
+                    <i class="fas fa-plus"></i> Allocate
+                </button>
+            </td>
+        `;
+        
+        return tr;
     }
 
     // ========== ALLOCATION HANDLING ==========
 
-    handleAllocateClick(e) {
+    async handleAllocateClick(e) {
         const $btn = $(e.currentTarget);
         const materialId = $btn.data('id');
         const materialName = $btn.data('name');
         const availableStock = parseFloat($btn.data('stock'));
         const unit = $btn.data('unit');
         const unitCost = $btn.data('cost');
-        const category = $btn.data('category');
         
-        this.checkExistingAllocation(materialId, materialName, availableStock, unit, unitCost, category);
-    }
-
-    checkExistingAllocation(materialId, materialName, availableStock, unit, unitCost, category) {
-        $.ajax({
-            url: `/admin/check-allocation/${this.batchproductId}/${materialId}`,
-            type: 'GET',
-            success: (response) => {
-                if (response.allocated && response.data) {
-                    this.showDuplicateAlert(response.data, materialId, materialName, availableStock, unit, unitCost, category);
-                } else {
-                    this.showAllocationModal(materialId, materialName, availableStock, unit, unitCost, category);
-                }
-            },
-            error: () => {
-                this.showError('Failed to check allocation status');
+        try {
+            const response = await $.ajax({
+                url: `/admin/check-allocation/${this.batchproductId}/${materialId}`,
+                type: 'GET',
+                cache: false
+            });
+            
+            if (response.allocated && response.data) {
+                this.showUpdateModal(response.data, materialId, materialName, availableStock, unit, unitCost);
+            } else {
+                this.showAllocationModal(materialId, materialName, availableStock, unit, unitCost);
             }
-        });
+        } catch (error) {
+            this.showError('Failed to check allocation status');
+        }
     }
 
-    showDuplicateAlert(existingData, materialId, materialName, availableStock, unit, unitCost, category) {
-        Swal.fire({
-            title: 'Material Already Allocated',
-            html: `
-                <div class="text-start">
-                    <p><strong>${materialName}</strong> is already allocated to this batch.</p>
-                    <div class="alert alert-info p-2">
-                        <p class="mb-1"><strong>Current Allocation:</strong> ${existingData.quantity_used} ${unit}</p>
-                        <p class="mb-1"><strong>Available Stock:</strong> ${availableStock} ${unit}</p>
-                        <p class="mb-0"><strong>Remaining Stock:</strong> ${availableStock - existingData.quantity_used} ${unit}</p>
-                    </div>
-                    <p>Do you want to update the allocation?</p>
-                </div>
-            `,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Update',
-            cancelButtonText: 'Cancel',
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#6c757d'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                this.showUpdateModal(existingData, materialId, materialName, availableStock, unit, unitCost, category);
-            }
-        });
+    showAllocationModal(materialId, materialName, availableStock, unit, unitCost) {
+        this.setupModal(materialId, materialName, availableStock, unit, unitCost, false);
+        this.elements.quantityModal.modal('show');
     }
 
-    showAllocationModal(materialId, materialName, availableStock, unit, unitCost, category) {
-        this.setupModal(materialId, materialName, availableStock, unit, unitCost, category, false);
-        this.$quantityModal.modal('show');
+    showUpdateModal(existingData, materialId, materialName, availableStock, unit, unitCost) {
+        this.setupModal(materialId, materialName, availableStock, unit, unitCost, true, existingData.quantity_used);
+        this.elements.quantityModal.modal('show');
     }
 
-    showUpdateModal(existingData, materialId, materialName, availableStock, unit, unitCost, category) {
-        this.setupModal(materialId, materialName, availableStock, unit, unitCost, category, true, existingData.quantity_used);
-        this.$quantityModal.modal('show');
-    }
-
-    setupModal(materialId, materialName, availableStock, unit, unitCost, category, isUpdate = false, existingQuantity = 0) {
+    setupModal(materialId, materialName, availableStock, unit, unitCost, isUpdate = false, existingQuantity = 0) {
         const remainingStock = availableStock - existingQuantity;
         const maxQuantity = isUpdate ? remainingStock : availableStock;
         
-        // Update modal title and button
-        const modalTitle = isUpdate ? 'Update Material Allocation' : 'Allocate Material';
-        const buttonText = isUpdate ? 'Update Allocation' : 'Confirm Allocation';
-        const buttonIcon = isUpdate ? 'fa-sync' : 'fa-check';
+        const { modalTitle, modalMaterialName, modalMaterialDetails, availableStockDisplay, confirmAllocationBtn } = this.elements;
         
-        $('.modal-title').html(`<i class="fas ${isUpdate ? 'fa-edit' : 'fa-cube'}"></i> ${modalTitle}`);
-        this.$confirmAllocationBtn.html(`<i class="fas ${buttonIcon}"></i> ${buttonText}`);
+        // Update modal content
+        modalTitle.html(`<i class="fas ${isUpdate ? 'fa-edit' : 'fa-cube'}"></i> ${isUpdate ? 'Update Material Allocation' : 'Allocate Material'}`);
+        modalMaterialName.text(materialName);
         
-        // Fill modal data
-        $('#modalMaterialName').text(materialName);
-        $('#modalMaterialDetails').html(`
-            <strong>Category:</strong> ${category} | 
+        const detailsHtml = `
             <strong>Unit Cost:</strong> Rs ${unitCost}
             ${isUpdate ? ` | <strong>Current:</strong> ${existingQuantity} ${unit}` : ''}
-        `);
+        `;
+        modalMaterialDetails.html(detailsHtml);
         
-        $('#availableStockDisplay').text(
+        availableStockDisplay.text(
             isUpdate 
                 ? `${availableStock} ${unit} (Remaining: ${remainingStock} ${unit})`
                 : `${availableStock} ${unit}`
         );
         
-        this.$allocateQuantity.val('');
-        this.$allocateQuantity.attr('max', maxQuantity);
-        this.$allocateQuantity.attr('step', unit === 'kg' || unit === 'liters' ? '0.01' : '1');
-        this.$allocateQuantity.attr('placeholder', `Enter quantity (max: ${maxQuantity} ${unit})`);
+        const allocateQuantity = this.elements.allocateQuantity;
+        allocateQuantity.val('');
+        allocateQuantity.attr('max', maxQuantity);
+        allocateQuantity.attr('step', unit === 'kg' || unit === 'liters' ? '0.01' : '1');
+        allocateQuantity.attr('placeholder', `Enter quantity (max: ${maxQuantity} ${unit})`);
         
-        // Set hidden values
-        $('#selectedMaterialId').val(materialId);
-        $('#selectedMaterialCost').val(unitCost);
-        $('#selectedMaterialCategory').val(category);
+        // Update button
+        confirmAllocationBtn.html(`<i class="fas ${isUpdate ? 'fa-sync' : 'fa-check'}"></i> ${isUpdate ? 'Update Allocation' : 'Confirm Allocation'}`);
         
-        // Store mode
+        // Store modal data as attributes
+        allocateQuantity.data({
+            materialId: materialId,
+            materialCost: unitCost,
+            isUpdate: isUpdate,
+            existingQuantity: existingQuantity
+        });
+        
         this.isUpdateMode = isUpdate;
     }
 
-    handleAllocationConfirm() {
-        const materialId = $('#selectedMaterialId').val();
-        const quantity = this.$allocateQuantity.val();
-        const maxQuantity = this.$allocateQuantity.attr('max');
-
+    async handleAllocationConfirm() {
+        const { allocateQuantity } = this.elements;
+        const quantity = allocateQuantity.val();
+        const maxQuantity = allocateQuantity.attr('max');
+        const data = allocateQuantity.data();
+        
         // Validation
         if (!quantity || quantity <= 0) {
             this.showError('Please enter a valid quantity');
@@ -257,129 +278,142 @@ this.batchproductId = window.batchproductId;
             return;
         }
 
-        this.allocateMaterial(materialId, quantity, this.isUpdateMode);
+        try {
+            await this.allocateMaterial(data.materialId, quantity, data.isUpdate);
+        } catch (error) {
+            this.showError('Failed to allocate material');
+        }
     }
 
-    allocateMaterial(materialId, quantity, isUpdate = false) {
-        $.ajax({
-            url: '/admin/allocate-material',
-            type: 'POST',
-            data: {
-                batchproduct_id: this.batchproductId,
-                material_id: materialId,
-                quantity_used: quantity,
-                _token: window.csrfToken
-            },
-            success: (response) => {
-                if (response.success) {
-                    this.showSuccess(
-                        isUpdate ? 'Material allocation updated successfully!' : 'Material allocated successfully!'
-                    );
-                    this.$quantityModal.modal('hide');
-                    
-                    // Update allocated materials
-                    this.updateAllocatedMaterials();
-                    
-                    // Refresh available materials if category is selected
-                    const categoryId = this.$categorySelect.val();
-                    if (categoryId) {
-                        this.fetchMaterialsByCategory(categoryId);
-                    }
-                } else {
-                    this.showError(response.message || 'Failed to allocate material');
+    async allocateMaterial(materialId, quantity, isUpdate = false) {
+        try {
+            const response = await $.ajax({
+                url: '/admin/allocate-material',
+                type: 'POST',
+                data: {
+                    batchproduct_id: this.batchproductId,
+                    material_id: materialId,
+                    quantity_used: quantity,
+                    _token: window.csrfToken
                 }
-            },
-            error: (xhr) => {
-                const errorMsg = xhr.responseJSON?.message || 'Failed to allocate material';
-                this.showError(errorMsg);
+            });
+            
+            if (response.success) {
+                this.showSuccess(
+                    isUpdate ? 'Material allocation updated successfully!' : 'Material allocated successfully!'
+                );
+                this.elements.quantityModal.modal('hide');
+                
+                // Update UI immediately without waiting for server response
+                this.updateAllocatedMaterials();
+                
+                // Invalidate cache for current category
+                const categoryId = this.elements.categorySelect.val();
+                if (categoryId) {
+                    this.materialsCache.delete(categoryId);
+                    await this.fetchMaterialsByCategory(categoryId);
+                }
+            } else {
+                this.showError(response.message || 'Failed to allocate material');
             }
-        });
+        } catch (xhr) {
+            const errorMsg = xhr.responseJSON?.message || 'Failed to allocate material';
+            this.showError(errorMsg);
+        }
     }
 
     // ========== ALLOCATED MATERIALS SECTION ==========
 
-    fetchAllocatedMaterials() {
-        $.ajax({
-            url: `/admin/show-used-materials/${this.batchproductId}`,
-            type: 'GET',
-            success: (response) => {
-                if (response.success) {
-                    this.updateAllocatedTable(response.data.materials);
-                    this.updateCostSummary(response.data.materials);
-                }
-            },
-            error: () => {
-                console.error('Failed to fetch allocated materials');
+    async fetchAllocatedMaterials() {
+        try {
+            const response = await $.ajax({
+                url: `/admin/show-used-materials/${this.batchproductId}`,
+                type: 'GET',
+                cache: false
+            });
+            
+            if (response.success) {
+                this.updateAllocatedTable(response.data.materials);
+                this.updateCostSummary(response.data.materials);
             }
-        });
+        } catch (error) {
+            console.error('Failed to fetch allocated materials:', error);
+        }
     }
 
     updateAllocatedMaterials() {
-        // Show loading state
-        const originalContent = this.$allocatedTable.html();
+        // Update UI optimistically
+        const tbody = this.elements.allocatedTable;
+        const loadingRow = `<tr><td colspan="6" class="text-center py-3">Updating...</td></tr>`;
+        tbody.html(loadingRow);
         
-        this.$allocatedTable.html(`
-            <tr>
-                <td colspan="6" class="text-center py-3">
-                    <div class="spinner-border spinner-border-sm text-primary"></div>
-                    <span class="ms-2">Updating...</span>
-                </td>
-            </tr>
-        `);
-        
-        // Fetch updated data after a short delay
-        setTimeout(() => {
-            this.fetchAllocatedMaterials();
-        }, 300);
+        // Fetch updated data
+        setTimeout(() => this.fetchAllocatedMaterials(), 100);
     }
 
     updateAllocatedTable(materials) {
-        this.$allocatedTable.empty();
+        const tbody = this.elements.allocatedTable;
+        tbody.empty();
         
         if (!materials || materials.length === 0) {
-            this.$allocatedTable.html(`
-                <tr>
-                    <td colspan="6" class="text-center py-4">
-                        <i class="fas fa-box-open fa-2x text-muted mb-2"></i>
-                        <p class="text-muted">No materials allocated yet</p>
-                    </td>
-                </tr>
-            `);
-            this.$selectedCount.text('0 items');
-            this.$confirmBtn.prop('disabled', true);
+            tbody.html(this.createEmptyAllocatedRow());
+            this.elements.selectedCount.text('0 items');
+            this.elements.confirmBtn.prop('disabled', true);
             return;
         }
 
-        let html = '';
+        // Build table using DocumentFragment for performance
+        const fragment = document.createDocumentFragment();
+        
         materials.forEach(material => {
-            html += `
-                <tr id="material-${material.id}" class="fade-in">
-                    <td>${this.escapeHtml(material.material_name || 'Unknown')}</td>
-                    <td>${this.escapeHtml(material.category_name || 'Unknown')}</td>
-                    <td>${material.quantity_used}</td>
-                    <td>Rs ${this.formatCurrency(material.unit_cost)}</td>
-                    <td>Rs ${this.formatCurrency(material.total_cost)}</td>
-                    <td>
-                        <button class="btn btn-danger btn-sm deleteBtn" 
-                                data-id="${material.id}"
-                                data-material="${this.escapeHtml(material.material_name || 'Unknown')}">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
+            const row = this.createAllocatedRow(material);
+            fragment.appendChild(row);
         });
         
-        this.$allocatedTable.html(html);
-        this.$selectedCount.text(materials.length + ' items');
-        this.$confirmBtn.prop('disabled', false);
+        tbody[0].appendChild(fragment);
+        this.elements.selectedCount.text(materials.length + ' items');
+        this.elements.confirmBtn.prop('disabled', false);
     }
 
-    handleDeleteClick(e) {
+    createAllocatedRow(material) {
+        const tr = document.createElement('tr');
+        tr.id = `material-${material.id}`;
+        tr.className = 'fade-in';
+        
+        tr.innerHTML = `
+            <td>${this.escapeHtml(material.material_name || 'Unknown')}</td>
+            <td>${this.escapeHtml(material.category_name || 'Unknown')}</td>
+            <td>${material.quantity_used}</td>
+            <td>Rs ${this.formatCurrency(material.unit_cost)}</td>
+            <td>Rs ${this.formatCurrency(material.total_cost)}</td>
+            <td>
+                <button class="btn btn-danger btn-sm deleteBtn" 
+                        data-id="${material.id}"
+                        data-material="${this.escapeHtml(material.material_name || 'Unknown')}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        
+        return tr;
+    }
+
+    createEmptyAllocatedRow() {
+        return `
+            <tr>
+                <td colspan="6" class="text-center py-4">
+                    <i class="fas fa-box-open fa-2x text-muted mb-2"></i>
+                    <p class="text-muted">No materials allocated yet</p>
+                </td>
+            </tr>
+        `;
+    }
+
+    async handleDeleteClick(e) {
         const allocationId = $(e.currentTarget).data('id');
         const materialName = $(e.currentTarget).data('material');
         
-        Swal.fire({
+        const result = await Swal.fire({
             title: 'Remove Material?',
             text: `Are you sure you want to remove ${materialName} from allocated materials?`,
             icon: 'warning',
@@ -387,54 +421,62 @@ this.batchproductId = window.batchproductId;
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
             confirmButtonText: 'Yes, remove it!'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                this.deleteAllocation(allocationId);
-            }
         });
-    }
-
-    deleteAllocation(allocationId) {
-        $.ajax({
-            url: `/admin/delete-allocation/${allocationId}`,
-            type: 'DELETE',
-            data: { _token: window.csrfToken },
-            success: (response) => {
-                if (response.success) {
-                    this.showSuccess('Material removed from allocation');
-                    this.updateAllocatedMaterials();
-                    
-                    // Refresh available materials if category is selected
-                    const categoryId = this.$categorySelect.val();
-                    if (categoryId) {
-                        this.fetchMaterialsByCategory(categoryId);
-                    }
-                } else {
-                    this.showError(response.message || 'Failed to remove allocation');
-                }
-            },
-            error: () => {
+        
+        if (result.isConfirmed) {
+            try {
+                await this.deleteAllocation(allocationId);
+            } catch (error) {
                 this.showError('Failed to remove allocation');
             }
-        });
+        }
+    }
+
+    async deleteAllocation(allocationId) {
+        try {
+            const response = await $.ajax({
+                url: `/admin/delete-allocation/${allocationId}`,
+                type: 'DELETE',
+                data: { _token: window.csrfToken }
+            });
+            
+            if (response.success) {
+                this.showSuccess('Material removed from allocation');
+                
+                // Remove row immediately for better UX
+                $(`#material-${allocationId}`).remove();
+                
+                // Update counts and costs
+                this.updateAllocatedMaterials();
+                
+                // Refresh available materials cache
+                const categoryId = this.elements.categorySelect.val();
+                if (categoryId) {
+                    this.materialsCache.delete(categoryId);
+                    await this.fetchMaterialsByCategory(categoryId);
+                }
+            } else {
+                this.showError(response.message || 'Failed to remove allocation');
+            }
+        } catch (error) {
+            throw error;
+        }
     }
 
     // ========== COST CALCULATION ==========
 
     updateCostSummary(materials) {
-        const materialsCost = (materials || []).reduce((total, material) => {
-            const tc = parseFloat(material.total_cost) || 0;
-            return total + tc;
+        const totalCost = (materials || []).reduce((sum, material) => {
+            return sum + (parseFloat(material.total_cost) || 0);
         }, 0);
-
-        // Update total cost display
-        this.$totalCost.text('Rs ' + this.formatCurrency(materialsCost));
+        
+        this.elements.totalCost.text('Rs ' + this.formatCurrency(totalCost));
     }
 
     // ========== HELPER METHODS ==========
 
     resetMaterialsTable() {
-        this.$materialsTableBody.html(`
+        this.elements.materialsTableBody.html(`
             <tr>
                 <td colspan="7" class="table-empty-state">
                     <i class="fas fa-inbox"></i> Select a category to view materials
@@ -444,7 +486,7 @@ this.batchproductId = window.batchproductId;
     }
 
     showEmptyTable(message) {
-        this.$materialsTableBody.html(`
+        this.elements.materialsTableBody.html(`
             <tr>
                 <td colspan="7" class="table-empty-state">
                     <i class="fas fa-search"></i> ${message}
@@ -465,10 +507,26 @@ this.batchproductId = window.batchproductId;
     }
 
     resetModal() {
-        $('.modal-title').html('<i class="fas fa-cube"></i> Allocate Material');
-        this.$confirmAllocationBtn.html('<i class="fas fa-check"></i> Confirm Allocation');
+        const { modalTitle, confirmAllocationBtn, allocateQuantity } = this.elements;
+        
+        modalTitle.html('<i class="fas fa-cube"></i> Allocate Material');
+        confirmAllocationBtn.html('<i class="fas fa-check"></i> Confirm Allocation');
+        allocateQuantity.val('');
+        allocateQuantity.removeData();
         this.isUpdateMode = false;
-        this.$allocateQuantity.val('');
+    }
+
+    // Utility methods
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
     }
 
     formatCurrency(amount) {
@@ -493,7 +551,7 @@ this.batchproductId = window.batchproductId;
             toast: true,
             position: 'top-end',
             showConfirmButton: false,
-            timer: 3000
+            timer: 2000 // Reduced from 3000ms
         });
     }
 
@@ -505,12 +563,19 @@ this.batchproductId = window.batchproductId;
             toast: true,
             position: 'top-end',
             showConfirmButton: false,
-            timer: 4000
+            timer: 3000 // Reduced from 4000ms
         });
     }
 }
 
 // Initialize when document is ready
 $(document).ready(function() {
+    // Add CSRF token to all AJAX requests
+    $.ajaxSetup({
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        }
+    });
+    
     window.productionMaterials = new ProductionMaterials();
 });

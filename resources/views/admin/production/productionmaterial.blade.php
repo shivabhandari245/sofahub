@@ -114,30 +114,29 @@
                                 </thead>
                                 <tbody id="allocatedTable">
                                     @if($allocatedMaterials->isEmpty())
-                                    <tr>
-                                        <td colspan="6" class="text-center py-4">
-                                            <i class="fas fa-box-open fa-2x text-muted mb-2"></i>
-                                            <p class="text-muted">No materials allocated yet</p>
-                                        </td>
-                                    </tr>
+                                        <tr>
+                                            <td colspan="6" class="text-center py-4">
+                                                <i class="fas fa-box-open fa-2x text-muted mb-2"></i>
+                                                <p class="text-muted">No materials allocated yet</p>
+                                            </td>
+                                        </tr>
                                     @else
-                                    @foreach($allocatedMaterials as $material)
-                                    <tr id="material-{{ $material->id }}">
-                                        <td>{{ $material->rawMaterial->name ?? 'Unknown' }}</td>
-                                        <td>{{ $material->rawMaterial->category->name ?? 'Unknown' }}</td>
-                                        <td>{{ $material->quantity_used }}</td>
-                                        <td>Rs {{ number_format($material->unit_cost, 2) }}</td>
-                                        <td>Rs {{ number_format($material->unit_cost * $material->quantity_used, 2) }}
-                                        </td>
-                                        <td>
-                                            <button class="btn btn-danger btn-sm deleteBtn"
-                                                data-id="{{ $material->id }}"
-                                                data-material="{{ $material->rawMaterial->name ?? 'Unknown' }}">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    @endforeach
+                                        @foreach($allocatedMaterials as $material)
+                                        <tr id="material-{{ $material->id }}" class="fade-in">
+                                            <td>{{ $material->rawMaterial->name ?? 'Unknown' }}</td>
+                                            <td>{{ $material->rawMaterial->category->name ?? 'Unknown' }}</td>
+                                            <td>{{ $material->quantity_used }}</td>
+                                            <td>Rs {{ number_format($material->unit_cost, 2) }}</td>
+                                            <td>Rs {{ number_format($material->total_cost, 2) }}</td>
+                                            <td>
+                                                <button class="btn btn-danger btn-sm deleteBtn" 
+                                                        data-id="{{ $material->id }}"
+                                                        data-material="{{ $material->rawMaterial->name ?? 'Unknown' }}">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        @endforeach
                                     @endif
                                 </tbody>
                             </table>
@@ -156,7 +155,7 @@
                 </div>
                 <div class="section-card-body">
                     <div class="summary-grid">
-                        <div class="summary-item total-cost">
+                        <div class="summary-itemtotal-cost">
                             <div class="summary-label">
                                 <span>Total Materials Cost</span>
                             </div>
@@ -164,24 +163,23 @@
                                 Rs
                                 {{ number_format($allocatedMaterials->sum(function($item) { return $item->unit_cost * $item->quantity_used; }), 2) }}
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- Confirm Form -->
+                                                <!-- Confirm Form -->
                     <form id="confirmForm" method="POST"
                         action="{{ url('admin/confirmBatchProduct/'.$batchproduct->id) }}">
                         @csrf
 
                         <div class="form-actions">
-                            <button type="submit" class="btn btn-primary btn-confirm" id="confirmBtn"
-                                {{ $allocatedMaterials->isEmpty() ? 'disabled' : '' }}>
-                                <i class="fas fa-check-circle"></i> Confirm Batch Allocation
-                            </button>
+ 
                             <a href="{{ url('admin/production') }}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left"></i> Back to Batches
                             </a>
                         </div>
                     </form>
+                        </div>
+                    </div>
+
+
                     @if (session('success'))
                     <div class="alert alert-success mt-3">{{ session('success') }}</div>
                     @endif
