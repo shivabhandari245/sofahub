@@ -61,16 +61,10 @@ class RawMaterialCategoryController extends Controller
     // DELETE CATEGORY
 public function deleteCategory($id)
 {
-    $materialsCount = RawMaterialCategoryModel::where('category_id', $id)->count();
 
-    if ($materialsCount > 0) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Cannot delete this category because it has raw materials assigned.'
-        ]);
-    }
+  $rawcategory = RawMaterialCategoryModel::findOrFail($id);
+  $rawcategory->delete();
 
-    RawMaterialCategoryModel::find($id)->delete();
 
     return response()->json(['success' => true, 'message' => 'Category deleted successfully!']);
 }

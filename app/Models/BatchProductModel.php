@@ -15,8 +15,6 @@ class BatchProductModel extends Model
         'material_cost'
     ];
 
-
-
     // A product can be used in many batches
     public function batches()
     {
@@ -37,5 +35,16 @@ class BatchProductModel extends Model
     public function quality()
     {
         return $this->belongsTo(ProductQualityModel::class, 'productquality_id');
+    }
+
+    // NEW: Delete used materials when product is deleted
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($product) {
+            // This will trigger the UsedMaterialObserver::deleted() method
+            $product->usedMaterials()->delete();
+        });
     }
 }
