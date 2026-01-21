@@ -59,6 +59,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->approved && $this->otp_verified;
     }
 
+      public function otpSessions()
+    {
+        return $this->hasMany(OtpSession::class);
+    }
+    
     public function markOtpVerified(): void
     {
         $this->update([

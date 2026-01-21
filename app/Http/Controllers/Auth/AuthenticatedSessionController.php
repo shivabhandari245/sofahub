@@ -9,75 +9,55 @@ use App\Models\User;
 
 class AuthenticatedSessionController extends Controller
 {
-    public function create()
-    {
-        // OTP pending? Check DB
-        if (session()->has('otp_user_id')) {
-            $user = User::find(session('otp_user_id'));
+    public function create() {
 
-            if ($user && !$user->otp_verified) {
-                return redirect()->route('otp.index');
-            }
+         return view('auth.login');
 
-            session()->forget('otp_user_id');
-        }
-
-        if (Auth::check()) {
-            $user = Auth::user();
-
-            if (!$user->approved) {
-                Auth::logout();
-                return redirect()->route('waitingapproval');
-            }
-
-            if (!$user->otp_verified) {
-                Auth::logout();
-                session(['otp_user_id' => $user->id]);
-                return redirect()->route('otp.index');
-            }
-
-            return $this->redirectBasedOnRole($user);
-        }
-
-        return view('auth.login');
-    }
+          }
 
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
-        $request->session()->regenerate();
-
         /** @var User $user */
         $user = Auth::user();
 
-        if (!$user->approved) {
-            Auth::logout();
-            $request->session()->invalidate();
-            return redirect()->route('waitingapproval')
-                ->with('error', 'Your account is not approved yet.');
-        }
+        // OTP pending
+                if (!$user->otp_verified) {
+            if (session()->has('otp_user_id') && session('otp_user_id') !== $user->id) {
+                Auth::logout();
+                $request->session()->invalidate();
+                return redirect()->route('otp.index')
+                    ->with('error', 'Please verify OTP for the previous account first.');
+            }
 
-        if (!$user->otp_verified) {
             Auth::logout();
             $request->session()->invalidate();
             session(['otp_user_id' => $user->id]);
+
             return redirect()->route('otp.index')
-                ->with('message', 'Please verify OTP sent to your email.');
+                ->with('message', 'Please verify your email first.');
         }
+
+        // Approval check
+        if (!$user->approved) {
+            Auth::logout();
+            $request->session()->invalidate();
+
+            return redirect()->route('waitingapproval')
+                ->with('error', 'Your account is awaiting approval.');
+        }
+
+        // Fully authenticated
+        session()->forget('otp_user_id');
+        $request->session()->regenerate();
 
         return $this->redirectBasedOnRole($user);
     }
 
     protected function redirectBasedOnRole(User $user): RedirectResponse
     {
-        if ($user->hasRole('admin')) {
-            return redirect()->route('admin.dashboard');
-        }
-
-        if ($user->hasRole('user')) {
-            return redirect()->route('user.userproducts.dashboard');
-        }
-
+        if ($user->hasRole('admin')) return redirect()->route('admin.dashboard');
+        if ($user->hasRole('user')) return redirect()->route('user.userproducts.dashboard');
         return redirect()->route('waitingapproval');
     }
 

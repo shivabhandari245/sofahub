@@ -1,46 +1,44 @@
 <?php
 namespace App\Http\Controllers\Auth;
+
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\OtpService;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 class RegisteredUserController extends Controller
 {
-    protected $otpService;
+    protected OtpService $otpService;
 
     public function __construct(OtpService $otpService)
     {
         $this->otpService = $otpService;
     }
 
+    // Show registration form
     public function create()
     {
-        // OTP pending → redirect
-        if (session()->has('otp_user_id')) {
-            $user = User::find(session('otp_user_id'));
-
-            if ($user && !$user->otp_verified) {
-                return redirect()->route('otp.index');
-            }
-
-            session()->forget('otp_user_id');
-        }
-
         return view('auth.register');
     }
 
-    public function store(Request $request): RedirectResponse
+    // Handle registration
+    public function store(Request $request)
     {
+        if (session()->has('otp_user_id')) {
+            return redirect()->route('otp.index')
+                ->with('error', 'Please verify OTP before creating another account.');
+        }
+
         $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'confirmed', 'min:8'],
+            'name' => ['required','string','max:255'],
+            'email' => ['required','string','email','max:255','unique:users,email'],
+            'password' => ['required','confirmed','min:8'],
         ]);
 
-        // Create user (not logged in yet)
+        $request->session()->invalidate();
+
+        // Create user (OTP not verified, not approved)
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
@@ -49,13 +47,13 @@ class RegisteredUserController extends Controller
             'approved' => false,
         ]);
 
-        // Generate OTP
+        // Generate & send OTP immediately
         $this->otpService->generate($user);
 
-        // Store OTP session
+        // Store in session for verification
         session(['otp_user_id' => $user->id]);
 
         return redirect()->route('otp.index')
-            ->with('message', 'Registration successful! Please verify OTP sent to your email.');
+            ->with('message', 'Registration successful! OTP has been sent. Please verify.');
     }
 }

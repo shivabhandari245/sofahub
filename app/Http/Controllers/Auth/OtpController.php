@@ -1,5 +1,6 @@
 <?php
 namespace App\Http\Controllers\Auth;
+
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\OtpService;
@@ -8,13 +9,14 @@ use Illuminate\Support\Facades\Auth;
 
 class OtpController extends Controller
 {
-    protected $otpService;
+    protected OtpService $otpService;
 
     public function __construct(OtpService $otpService)
     {
         $this->otpService = $otpService;
     }
 
+    // Show OTP form
     public function index()
     {
         if (!session()->has('otp_user_id')) {
@@ -22,7 +24,6 @@ class OtpController extends Controller
         }
 
         $user = User::find(session('otp_user_id'));
-
         if (!$user || $user->otp_verified) {
             session()->forget('otp_user_id');
             return redirect()->route('login');
@@ -31,33 +32,60 @@ class OtpController extends Controller
         return view('auth.verify-otp');
     }
 
+    // Verify OTP
     public function verify(Request $request)
     {
         $request->validate(['otp' => 'required|digits:6']);
 
-        $user = User::find(session('otp_user_id'));
-        if (!$user) return redirect()->route('login');
+        if (!session()->has('otp_user_id')) {
+            return redirect()->route('login');
+        }
 
+        $user = User::find(session('otp_user_id'));
+        if (!$user) {
+            session()->forget('otp_user_id');
+            return redirect()->route('login');
+        }
+
+        // Validate OTP
         if (!$this->otpService->validate($user, $request->otp)) {
             return back()->withErrors(['otp' => 'Invalid or expired OTP.']);
         }
 
+        // OTP valid → mark verified
         $user->otp_verified = true;
         $user->save();
 
         session()->forget('otp_user_id');
-
         Auth::login($user);
+        $request->session()->regenerate();
 
-        return redirect()->route(
-            $user->hasRole('admin') ? 'admin.dashboard' : 'user.userproducts.dashboard'
+        // Admin approval check
+        if (!$user->approved) {
+            return redirect()->route('waitingapproval')
+                ->with('message', 'OTP verified! Your account is awaiting admin approval.');
+        }
+
+        // Redirect based on role
+        return redirect()->intended(
+            $user->hasRole('admin')
+                ? route('admin.dashboard')
+                : route('user.userproducts.dashboard')
         );
     }
 
-    public function resend(Request $request)
+    // Resend OTP
+    public function resend()
     {
+        if (!session()->has('otp_user_id')) {
+            return response()->json(['error' => 'OTP session expired.'], 403);
+        }
+
         $user = User::find(session('otp_user_id'));
-        if (!$user) return response()->json(['error' => 'User not found.'], 404);
+        if (!$user) {
+            session()->forget('otp_user_id');
+            return response()->json(['error' => 'User not found.'], 404);
+        }
 
         try {
             $this->otpService->resend($user);
