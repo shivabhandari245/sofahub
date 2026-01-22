@@ -630,6 +630,7 @@
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
 let products = [];
@@ -641,7 +642,6 @@ let productTable;
 function showError(message) {
     Swal.fire({ icon: 'error', title: 'Invalid Action', text: message, confirmButtonColor: '#d33' });
 }
-
 function showSuccess(message) {
     Swal.fire({ icon: 'success', title: 'Success', text: message, timer: 1200, showConfirmButton: false });
 }
@@ -698,13 +698,13 @@ $(document).on('click', '.addProduct', function() {
 });
 
 $('#unitPriceInput, #quantityInput').on('input', function() {
-    let profit = $('#unitPriceInput').val() - currentProduct.cost_per_product;
+    let profit = parseFloat($('#unitPriceInput').val() || 0) - currentProduct.cost_per_product;
     $('#profitPerUnit').text(profit.toFixed(2));
 });
 
 $('#confirmAdd').click(function () {
-    let qty = parseFloat($('#quantityInput').val());
-    let price = parseFloat($('#unitPriceInput').val());
+    let qty = parseFloat($('#quantityInput').val() || 0);
+    let price = parseFloat($('#unitPriceInput').val() || 0);
     $('#quantityModal').modal('hide');
 
     if (!qty || qty <= 0) { showError('Enter a valid quantity.'); return; }
@@ -745,32 +745,7 @@ $('#confirmAdd').click(function () {
     }
 });
 
-/* ====== PAYMENT STATUS ====== */
-function validatePaymentStatus() {
-    const status = $('input[name="payment_status"]:checked').val();
-    if (!status) { showError('Please select payment status.'); return false; }
-    if ((status === 'paid' || status === 'partially_paid') && $('.payment-check:checked').length === 0) {
-        showError('Please select payment method for paid sale.');
-        return false;
-    }
-    return true;
-}
-
-$('input[name="payment_status"]').on('change', function () {
-    const status = $(this).val();
-    if (status === 'unpaid') {
-        $('.payment-check').prop('checked', false).prop('disabled', true);
-        $('#paymentRemarksRow').slideDown();
-        $('#paymentRemarks').prop('required', true);
-    } else {
-        $('.payment-check').prop('disabled', false);
-        $('#paymentRemarksRow').slideDown();
-        $('#paymentRemarks').prop('required', true);
-    }
-    validatePayments();
-});
-
-/* ====== CART RENDER ====== */
+/* ====== RENDER CART ====== */
 function renderCart() {
     let tbody = $('#cartTableBody').empty();
     let subtotal = 0;
@@ -826,26 +801,49 @@ function calculateTotals() {
     $('#cartTotal').text((subtotalAfterDiscount + tax).toFixed(2));
 }
 
-/* ====== VALIDATE PAYMENTS ====== */
+/* ====== PAYMENT STATUS & METHOD ====== */
+$('input[name="payment_status"]').on('change', function () {
+    const status = $(this).val();
+
+    if (status === 'unpaid') {
+        $('.payment-check').prop('checked', false).prop('disabled', true);
+    } else {
+        $('.payment-check').prop('disabled', false);
+    }
+
+    $('#paymentRemarksRow').slideDown();
+    $('#paymentRemarks').prop('required', true);
+
+    validatePayments();
+});
+
+// Live validation for remarks and payment method
+$('#paymentRemarks').on('input', validatePayments);
+$('.payment-check').on('change', validatePayments);
+
 function validatePayments() {
-    let status = $('input[name="payment_status"]:checked').val();
-    let selected = $('.payment-check:checked');
-    let remarks = $('#paymentRemarks').val().trim();
+    const status = $('input[name="payment_status"]:checked').val();
+    const selectedPayments = $('.payment-check:checked').length;
+    const remarks = $('#paymentRemarks').val().trim();
+    const cartNotEmpty = cart.length > 0;
+
     let valid = true;
 
+    if (!status) valid = false;
+    if ((status === 'paid' || status === 'partially_paid') && selectedPayments === 0) valid = false;
     if (!remarks) valid = false;
-    if ((status === 'paid' || status === 'partially_paid') && selected.length === 0) valid = false;
 
-    $('#checkoutBtn').prop('disabled', !valid || cart.length === 0);
+    $('#checkoutBtn').prop('disabled', !valid || !cartNotEmpty);
     return valid;
 }
 
 /* ====== CUSTOMER SEARCH & SELECT ====== */
 $('#customerSearch').on('keyup', function() {
-    let q = $(this).val();
+    const q = $(this).val();
     if (!q) return $('#customerSuggestions').hide();
 
-    $.get("{{ route('user.customers.search') }}", { q }, function(res) {
+    $.get("{{ route('user.customers.search') }}", { q })
+    .done(function(res) {
         let html = '';
         res.forEach(c => {
             html += `<div class="list-group-item customerSelect" data-customer='${JSON.stringify(c)}'>
@@ -853,12 +851,12 @@ $('#customerSearch').on('keyup', function() {
                      </div>`;
         });
         $('#customerSuggestions').html(html).show();
-    });
+    })
+    .fail(function() { showError('Failed to fetch customers'); });
 });
 
 $(document).on('click', '.customerSelect', function() {
-    let c = JSON.parse($(this).attr('data-customer')); // ✅ FIX
-
+    const c = JSON.parse($(this).attr('data-customer'));
     $('#customer_id').val(c.id);
     $('#customer_name').val(c.name);
     $('#customer_phone').val(c.phone);
@@ -867,22 +865,10 @@ $(document).on('click', '.customerSelect', function() {
 
     $('#customerInfoDisplay').html(`
         <div class="customer-details-grid">
-            <div class="customer-detail-item">
-                <div class="customer-detail-label">Name</div>
-                <div class="customer-detail-value">${c.name}</div>
-            </div>
-            <div class="customer-detail-item">
-                <div class="customer-detail-label">Phone</div>
-                <div class="customer-detail-value">${c.phone}</div>
-            </div>
-            <div class="customer-detail-item">
-                <div class="customer-detail-label">Email</div>
-                <div class="customer-detail-value">${c.email ?? '<span class="empty">N/A</span>'}</div>
-            </div>
-            <div class="customer-detail-item">
-                <div class="customer-detail-label">Address</div>
-                <div class="customer-detail-value">${c.address ?? '<span class="empty">N/A</span>'}</div>
-            </div>
+            <div class="customer-detail-item"><div class="customer-detail-label">Name</div><div class="customer-detail-value">${c.name}</div></div>
+            <div class="customer-detail-item"><div class="customer-detail-label">Phone</div><div class="customer-detail-value">${c.phone}</div></div>
+            <div class="customer-detail-item"><div class="customer-detail-label">Email</div><div class="customer-detail-value">${c.email ?? '<span class="empty">N/A</span>'}</div></div>
+            <div class="customer-detail-item"><div class="customer-detail-label">Address</div><div class="customer-detail-value">${c.address ?? '<span class="empty">N/A</span>'}</div></div>
         </div>
     `);
 
@@ -903,14 +889,14 @@ function validateCustomerForm() {
     $('.error-name, .error-phone, .error-email, .error-address').text('');
     $('#addCustomerForm input, #addCustomerForm textarea').removeClass('is-invalid');
 
-    let name = $('#modalCustomerName').val().trim();
-    let phone = $('#modalCustomerPhone').val().trim();
-    let email = $('#modalCustomerEmail').val().trim();
+    const name = $('#modalCustomerName').val().trim();
+    const phone = $('#modalCustomerPhone').val().trim();
+    const email = $('#modalCustomerEmail').val().trim();
 
     if (!name) { $('.error-name').text('Customer name is required'); $('#modalCustomerName').addClass('is-invalid'); valid = false; }
     if (!phone) { $('.error-phone').text('Phone number is required'); $('#modalCustomerPhone').addClass('is-invalid'); valid = false; }
-    else if (!/^\d{10}$/.test(phone)) { $('.error-phone').text('Phone number must be exactly 10 digits'); $('#modalCustomerPhone').addClass('is-invalid'); valid = false; }
-    if (email) { if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { $('.error-email').text('Enter a valid email address'); $('#modalCustomerEmail').addClass('is-invalid'); valid = false; } }
+    else if (!/^\d{10}$/.test(phone)) { $('.error-phone').text('Phone number must be 10 digits'); $('#modalCustomerPhone').addClass('is-invalid'); valid = false; }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { $('.error-email').text('Enter valid email'); $('#modalCustomerEmail').addClass('is-invalid'); valid = false; }
 
     return valid;
 }
@@ -920,51 +906,51 @@ $('#addCustomerForm').submit(function(e) {
     if (!validateCustomerForm()) return;
 
     $.post("{{ route('user.customers.store') }}", $(this).serialize())
-        .done(function(res) {
-            if (res.success) {
-                let c = res.customer;
-                $('#customer_id').val(c.id);
-                $('#customer_name').val(c.name);
-                $('#customer_phone').val(c.phone);
-                $('#customer_email').val(c.email);
-                $('#customer_address').val(c.address);
+    .done(function(res) {
+        if (res.success) {
+            const c = res.customer;
+            $('#customer_id').val(c.id);
+            $('#customer_name').val(c.name);
+            $('#customer_phone').val(c.phone);
+            $('#customer_email').val(c.email);
+            $('#customer_address').val(c.address);
 
-                $('#customerInfoDisplay').html(`
-                    <div class="customer-details-grid">
-                        <div class="customer-detail-item"><div class="customer-detail-label">Name</div><div class="customer-detail-value">${c.name}</div></div>
-                        <div class="customer-detail-item"><div class="customer-detail-label">Phone</div><div class="customer-detail-value">${c.phone}</div></div>
-                        <div class="customer-detail-item"><div class="customer-detail-label">Email</div><div class="customer-detail-value">${c.email ?? '<span class="empty">N/A</span>'}</div></div>
-                        <div class="customer-detail-item"><div class="customer-detail-label">Address</div><div class="customer-detail-value">${c.address ?? '<span class="empty">N/A</span>'}</div></div>
-                    </div>
-                `);
+            $('#customerInfoDisplay').html(`
+                <div class="customer-details-grid">
+                    <div class="customer-detail-item"><div class="customer-detail-label">Name</div><div class="customer-detail-value">${c.name}</div></div>
+                    <div class="customer-detail-item"><div class="customer-detail-label">Phone</div><div class="customer-detail-value">${c.phone}</div></div>
+                    <div class="customer-detail-item"><div class="customer-detail-label">Email</div><div class="customer-detail-value">${c.email ?? '<span class="empty">N/A</span>'}</div></div>
+                    <div class="customer-detail-item"><div class="customer-detail-label">Address</div><div class="customer-detail-value">${c.address ?? '<span class="empty">N/A</span>'}</div></div>
+                </div>
+            `);
 
-                $('#customerDetailsForm').show();
-                $('#addCustomerModal').modal('hide');
-            }
-        })
-        .fail(function(xhr) {
-            if (xhr.status === 422) {
-                let errors = xhr.responseJSON.errors;
-                if (errors.name) $('.error-name').text(errors.name[0]);
-                if (errors.phone) $('.error-phone').text(errors.phone[0]);
-                if (errors.email) $('.error-email').text(errors.email[0]);
-                if (errors.address) $('.error-address').text(errors.address[0]);
-            } else if (xhr.responseJSON?.customer_exists) {
-                $('.error-email').text(xhr.responseJSON.message);
-            } else {
-                alert('Something went wrong. Please try again.');
-            }
-        });
+            $('#customerDetailsForm').show();
+            $('#addCustomerModal').modal('hide');
+            showSuccess('Customer added successfully');
+        }
+    })
+    .fail(function(xhr) {
+        if (xhr.status === 422) {
+            const errors = xhr.responseJSON.errors;
+            if (errors.name) $('.error-name').text(errors.name[0]);
+            if (errors.phone) $('.error-phone').text(errors.phone[0]);
+            if (errors.email) $('.error-email').text(errors.email[0]);
+            if (errors.address) $('.error-address').text(errors.address[0]);
+        } else if (xhr.responseJSON?.customer_exists) {
+            $('.error-email').text(xhr.responseJSON.message);
+        } else {
+            showError('Something went wrong. Please try again.');
+        }
+    });
 });
 
 /* ====== CHECKOUT FORM ====== */
-$('#checkoutForm').on('submit', function (e) {
+$('#checkoutForm').on('submit', function(e) {
     if (cart.length === 0) { e.preventDefault(); showError('Your cart is empty.'); return; }
     if (!$('#customer_id').val()) { e.preventDefault(); showError('Please select a customer.'); return; }
-    if (!validatePayments()) { e.preventDefault(); return; }
-    if (!validatePaymentStatus()) { e.preventDefault(); return; }
+    if (!validatePayments()) { e.preventDefault(); showError('Please complete payment details.'); return; }
 
-    const selectedPayments = $('.payment-check:checked').map(function () { return $(this).val(); }).get();
+    const selectedPayments = $('.payment-check:checked').map(function() { return $(this).val(); }).get();
     $('#paymentMethodInput').val(selectedPayments.join(','));
     $('#paymentRemarksInput').val($('#paymentRemarks').val());
 });
