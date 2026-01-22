@@ -172,35 +172,32 @@ public function getCustomers(Request $request)
 
 
 public function store(Request $request)
-
-
 {
-
-
-  
-
     $validated = $request->validate([
         'customer_id'      => 'required|exists:customers,id',
         'cartItems'        => 'required|json',
         'tax_rate'         => 'nullable|numeric|min:0|max:100',
         'discount'         => 'nullable|numeric|min:0',
-        'payment_method'   => 'nullable|',           // Array of methods    
-        'payment_remarks'  => 'nullable|string|max:500',
+        'payment_method'   => 'nullable|array',
+        'payment_method.*' => 'in:cash,qr,cheque',
+        'payment_remarks'  => 'required|string|max:500',
         'payment_status'   => 'required|in:paid,unpaid,partially_paid',
     ]);
 
-    $paymentMethod  = $validated['payment_method'] ?? []; // Already array
-    $paymentRemarks = $validated['payment_remarks'] ?? null;
+    $paymentMethod  = $validated['payment_method'] ?? [];
+    $paymentRemarks = $validated['payment_remarks'];
     $paymentStatus  = $validated['payment_status'];
 
-    // 2️⃣ Business rules for payments
+    // If unpaid, clear payment methods
     if ($paymentStatus === 'unpaid') {
-        $paymentMethod  = [];
-        $paymentRemarks = null;
+        $paymentMethod = [];
     }
 
-    if ($paymentStatus === 'paid' && empty($paymentMethod)) {
-        return back()->withErrors(['payment_method' => 'Payment method is required for paid sales.']);
+    // Require payment method for paid or partially paid
+    if (in_array($paymentStatus, ['paid', 'partially_paid']) && empty($paymentMethod)) {
+        return back()->withErrors([
+            'payment_method' => 'Payment method is required for paid sales.'
+        ]);
     }
 
     $cartItems  = json_decode($validated['cartItems'], true);
@@ -211,7 +208,7 @@ public function store(Request $request)
     DB::beginTransaction();
 
     try {
-        // 3️⃣ Create the sale first
+        // Create the sale
         $sale = Sale::create([
             'customer_id'     => $customerId,
             'subtotal'        => 0,
@@ -224,17 +221,13 @@ public function store(Request $request)
             'profitafterdiscount' => 0,
             'user_id'         => Auth::id(),
             'status'          => 'completed',
-
-            // Payment info
             'payment_status'  => $paymentStatus,
-            'payment_method'  => $paymentMethod,   // store array directly
+            'payment_method'  => $paymentMethod,   // array cast handles JSON
             'payment_remarks' => $paymentRemarks,
         ]);
 
-        $subtotal    = 0;
-        $totalProfit = 0;
+        $subtotal = $totalProfit = 0;
 
-        // 4️⃣ Process cart items
         foreach ($cartItems as $item) {
             $product = ProductModel::findOrFail($item['product_id']);
 
@@ -261,13 +254,12 @@ public function store(Request $request)
             $totalProfit += $itemProfit;
         }
 
-        // 5️⃣ Calculate totals
         $afterDiscount       = max(0, $subtotal - $discount);
         $taxAmount           = round($afterDiscount * ($taxRate / 100), 2);
         $totalAmount         = round($afterDiscount + $taxAmount, 2);
         $profitAfterDiscount = max(0, $totalProfit - $discount);
 
-        // 6️⃣ Update sale totals
+        // Update totals
         $sale->update([
             'subtotal'           => $subtotal,
             'afterdiscount'      => $afterDiscount,
@@ -307,7 +299,6 @@ public function show(Sale $sale)
 
 
 
-
 public function updatePaymentStatus(Request $request, $id)
 {
     $sale = Sale::findOrFail($id);
@@ -316,24 +307,23 @@ public function updatePaymentStatus(Request $request, $id)
         'payment_status'   => 'required|in:paid,unpaid,partially_paid',
         'payment_method'   => 'nullable|array',
         'payment_method.*' => 'in:cash,qr,cheque',
-        'payment_remarks'  => 'nullable|string|max:500',
+        'payment_remarks'  => 'required|string|max:500',
     ]);
 
     $paymentStatus  = $validated['payment_status'];
     $paymentMethods = $validated['payment_method'] ?? [];
-    $paymentRemarks = $validated['payment_remarks'] ?? null;
+    $paymentRemarks = $validated['payment_remarks'];
 
-    // Business logic
     if ($paymentStatus === 'unpaid') {
         $paymentMethods = [];
-        $paymentRemarks = null;
     }
 
-    if ($paymentStatus === 'paid' && empty($paymentMethods)) {
-        return back()->withErrors(['payment_method' => 'Payment method is required for paid sales.']);
+    if (in_array($paymentStatus, ['paid', 'partially_paid']) && empty($paymentMethods)) {
+        return back()->withErrors([
+            'payment_method' => 'Payment method is required for paid or partially paid sales.'
+        ]);
     }
 
-    // Update the sale
     $sale->update([
         'payment_status'  => $paymentStatus,
         'payment_method'  => $paymentMethods,
@@ -343,6 +333,8 @@ public function updatePaymentStatus(Request $request, $id)
     return redirect()->route('user.sales.show', $sale->id)
                      ->with('success', 'Payment status updated successfully.');
 }
+
+
 
 
 

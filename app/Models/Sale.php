@@ -12,7 +12,7 @@ class Sale extends Model
     protected $casts = [
         'date' => 'datetime',
         'returned_at' => 'datetime',
-        // Do NOT cast payment_method here
+        'payment_method' => 'array', // 🔹 array cast
     ];
 
     public function user()
@@ -38,47 +38,25 @@ class Sale extends Model
     /**
      * Accessor: always decode payment_method from JSON
      */
-    public function getPaymentMethodAttribute($value)
-    {
-        if (is_array($value)) {
-            return $value;
-        }
-
-        $decoded = json_decode($value, true);
-
-        return is_array($decoded) ? $decoded : [];
-    }
-
-    /**
-     * Accessor for DataTables / frontend display
-     */
-    public function getPaymentMethodDisplayAttribute()
+   
+ public function getPaymentMethodDisplayAttribute()
     {
         $methods = $this->payment_method;
-
-        if (!empty($methods)) {
-            return implode(', ', array_map(fn($m) => ucfirst($m), $methods));
-        }
-
-        return 'N/A';
+        return !empty($methods)
+            ? implode(', ', array_map(fn($m) => ucfirst($m), $methods))
+            : 'N/A';
     }
 
-    /**
-     * Payment status display
-     */
     public function getPaymentStatusDisplayAttribute()
     {
-        switch ($this->payment_status) {
-            case 'paid':
-                return 'Paid';
-            case 'unpaid':
-                return 'Unpaid';
-            case 'partially_paid':
-                return 'Partially Paid';
-            default:
-                return '-';
-        }
+        return match($this->payment_status) {
+            'paid' => 'Paid',
+            'unpaid' => 'Unpaid',
+            'partially_paid' => 'Partially Paid',
+            default => '-',
+        };
     }
+
 
     public function resolveRouteBinding($value, $field = null)
     {

@@ -226,9 +226,15 @@
 
 
       
-        <div class="row mt-2" id="paymentRemarksRow" style="display:none;">
+        <div class="row mt-2" id="paymentRemarksRow">
             <div class="col-12">
-                <input type="text" class="form-control" id="paymentRemarks" placeholder="Enter remarks">
+                <input type="text"
+       class="form-control"
+       id="paymentRemarks"
+       name="payment_remarks"
+       placeholder="Enter remarks"
+       required>
+
             </div>
         </div>
     </div>
@@ -264,13 +270,11 @@
                                     </div>
                                 </div>
                             </div>
-<input type="hidden" name="payment_method" id="paymentMethodInput">
-<input type="hidden" name="payment_remarks" id="paymentRemarksInput">
+
+
 
 <input type="hidden" name="cartItems" id="cartItemsInput">
 
-
-                            <!-- Payment Status -->
 <div class="card mb-3">
     <div class="card-header bg-light py-2">
         <h6 class="mb-0">
@@ -312,8 +316,7 @@
                            type="radio"
                            name="payment_status"
                            id="statusUnpaid"
-                           value="unpaid"
-                           checked>
+                           value="unpaid">
                     <label class="form-check-label" for="statusUnpaid">
                         ❌ Unpaid
                     </label>
@@ -322,6 +325,8 @@
         </div>
     </div>
 </div>
+
+                            <!-- Payment Status -->
 
                             <button type="submit" class="btn btn-success w-100 btn-lg" id="checkoutBtn" disabled>
                                 <i class="fas fa-check-circle me-2"></i>Process Sale
@@ -631,54 +636,18 @@ let products = [];
 let cart = [];
 let currentProduct = null;
 let productTable;
+
+/* ====== TOASTS ====== */
 function showError(message) {
-    Swal.fire({
-        icon: 'error',
-        title: 'Invalid Action',
-        text: message,
-        confirmButtonColor: '#d33'
-    });
+    Swal.fire({ icon: 'error', title: 'Invalid Action', text: message, confirmButtonColor: '#d33' });
 }
 
 function showSuccess(message) {
-    Swal.fire({
-        icon: 'success',
-        title: 'Success',
-        text: message,
-        timer: 1200,
-        showConfirmButton: false
-    });
+    Swal.fire({ icon: 'success', title: 'Success', text: message, timer: 1200, showConfirmButton: false });
 }
 
-/* ===============================
-   SPLIT PAYMENT LOGIC
-================================ */
-//paymentcheck method 
-
-$('.payment-check').on('change', function () {
-    // Show remarks input if any payment is selected
-    if ($('.payment-check:checked').length > 0) {
-        $('#paymentRemarksRow').slideDown();
-    } else {
-        $('#paymentRemarksRow').slideUp();
-        $('#paymentRemarks').val(''); // clear remarks
-    }
-
-    validatePayments(); // re-validate whenever where selection changes
-});
-
-
-
-
-/* ===============================
-   PRODUCT LOADING
-================================ */
-
-
-
-
+/* ====== DATATABLE ====== */
 $(document).ready(function () {
-
     productTable = $('#productTable').DataTable({
         processing: true,
         serverSide: true,
@@ -687,18 +656,10 @@ $(document).ready(function () {
         lengthChange: false,
         pageLength: 10,
         responsive: true,
-
         ajax: {
             url: "{{ route('user.products.ajaxList') }}",
-            data: function (d) {
-                d.category_id = $('#category').val();
-            }
+            data: function (d) { d.category_id = $('#category').val(); }
         },
-
-          drawCallback: function (settings) {
-        $('#productCount').text(settings._iRecordsTotal + ' products');
-    },
-
         columns: [
             { data: 'name' },
             { data: 'category' },
@@ -710,31 +671,22 @@ $(document).ready(function () {
                 orderable: false,
                 searchable: false,
                 render: function (data) {
-                    return `
-                        <button class="btn btn-sm btn-primary addProduct"
-                                data-product='${JSON.stringify(data)}'>
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    `;
+                    return `<button class="btn btn-sm btn-primary addProduct" data-product='${JSON.stringify(data)}'>
+                                <i class="fas fa-plus"></i>
+                            </button>`;
                 }
             }
         ],
-
         order: [[0, 'asc']],
-
         drawCallback: function (settings) {
             $('#productCount').text(settings._iRecordsTotal + ' products');
         }
     });
-
 });
 
-
-/* ===============================
-   ADD PRODUCT MODAL
-================================ */
+/* ====== ADD PRODUCT MODAL ====== */
 $(document).on('click', '.addProduct', function() {
-    currentProduct = $(this).data('product');
+    currentProduct = JSON.parse($(this).attr('data-product'));
 
     $('#productName').text(currentProduct.name);
     $('#availableStock').text(currentProduct.quantity);
@@ -742,7 +694,6 @@ $(document).on('click', '.addProduct', function() {
     $('#quantityInput').val(1);
     $('#unitPriceInput').val(currentProduct.cost_per_product);
     $('#profitPerUnit').text('0.00');
-
     $('#quantityModal').modal('show');
 });
 
@@ -754,26 +705,16 @@ $('#unitPriceInput, #quantityInput').on('input', function() {
 $('#confirmAdd').click(function () {
     let qty = parseFloat($('#quantityInput').val());
     let price = parseFloat($('#unitPriceInput').val());
-   $('#quantityModal').modal('hide');
-    if (!qty || qty <= 0) {
-        showError('Enter a valid quantity.');
-        return;
-    }
+    $('#quantityModal').modal('hide');
 
-    let existingIndex = cart.findIndex(
-        item => item.product_id === currentProduct.id
-    );
+    if (!qty || qty <= 0) { showError('Enter a valid quantity.'); return; }
 
+    let existingIndex = cart.findIndex(item => item.product_id === currentProduct.id);
     let cartQty = existingIndex !== -1 ? cart[existingIndex].quantity : 0;
     let remainingStock = currentProduct.quantity - cartQty;
 
-   
-    if (qty > remainingStock) {
-        showError(`Not enough stock available. Remaining: ${remainingStock}`);
-        return;
-    }
+    if (qty > remainingStock) { showError(`Not enough stock. Remaining: ${remainingStock}`); return; }
 
-   
     if (existingIndex !== -1) {
         Swal.fire({
             title: 'Product already in cart',
@@ -783,20 +724,15 @@ $('#confirmAdd').click(function () {
             confirmButtonText: 'Yes, Update',
             cancelButtonText: 'Cancel',
             confirmButtonColor: '#0d6efd'
-            
         }).then((result) => {
             if (result.isConfirmed) {
                 cart[existingIndex].quantity += qty;
                 cart[existingIndex].unit_price = price;
-
-             
                 renderCart();
                 showSuccess('Cart updated successfully');
             }
         });
-
     } else {
-        // ✅ New product
         cart.push({
             product_id: currentProduct.id,
             name: currentProduct.name,
@@ -804,59 +740,45 @@ $('#confirmAdd').click(function () {
             unit_price: price,
             cost_price: currentProduct.cost_per_product
         });
-
-        $('#quantityModal').modal('hide');
         renderCart();
         showSuccess('Product added to cart');
     }
 });
 
-//payment method validation
+/* ====== PAYMENT STATUS ====== */
 function validatePaymentStatus() {
     const status = $('input[name="payment_status"]:checked').val();
-
-    if (!status) {
-        showError('Please select payment status.');
-        return false;
-    }
-
-    // If paid → at least one payment method must be selected
-    if (status === 'paid' && $('.payment-check:checked').length === 0) {
+    if (!status) { showError('Please select payment status.'); return false; }
+    if ((status === 'paid' || status === 'partially_paid') && $('.payment-check:checked').length === 0) {
         showError('Please select payment method for paid sale.');
         return false;
     }
-
-    // If unpaid → no payment method required
     return true;
 }
 
-//ui if unpaid
-
 $('input[name="payment_status"]').on('change', function () {
     const status = $(this).val();
-
     if (status === 'unpaid') {
         $('.payment-check').prop('checked', false).prop('disabled', true);
-        $('#paymentRemarksRow').slideUp();
+        $('#paymentRemarksRow').slideDown();
+        $('#paymentRemarks').prop('required', true);
     } else {
         $('.payment-check').prop('disabled', false);
+        $('#paymentRemarksRow').slideDown();
+        $('#paymentRemarks').prop('required', true);
     }
+    validatePayments();
 });
 
-/* ===============================
-   CART RENDER
-================================ */
+/* ====== CART RENDER ====== */
 function renderCart() {
     let tbody = $('#cartTableBody').empty();
     let subtotal = 0;
-    let profit = 0;
 
     cart.forEach((item, index) => {
         let rowSubtotal = item.quantity * item.unit_price;
         let rowProfit = (item.unit_price - item.cost_price) * item.quantity;
-
         subtotal += rowSubtotal;
-        profit += rowProfit;
 
         tbody.append(`
             <tr>
@@ -866,27 +788,16 @@ function renderCart() {
                 <td>${rowSubtotal.toFixed(2)}</td>
                 <td>${rowProfit.toFixed(2)}</td>
                 <td>
-                    <button class="btn btn-sm btn-danger removeItem" data-index="${index}">
-                        ×
-                    </button>
+                    <button class="btn btn-sm btn-danger removeItem" data-index="${index}">×</button>
                 </td>
             </tr>
         `);
     });
 
-    // Update subtotal in DOM
     $('#cartSubtotal').text(subtotal.toFixed(2));
-
-    // Recalculate totals including discount, tax, etc.
     calculateTotals();
-
-    // Update cart items input for backend
     $('#cartItemsInput').val(JSON.stringify(cart));
-
-    // Update checkout button
     validatePayments();
-
-    // Update cart count display
     $('#cartCount').text(cart.length);
 }
 
@@ -895,104 +806,65 @@ $(document).on('click', '.removeItem', function() {
     renderCart();
 });
 
-/* ===============================
-   TAX & DISCOUNT
-================================ */
+/* ====== TAX & DISCOUNT ====== */
 $('#taxRate, #discount').on('input', calculateTotals);
-
 
 function calculateTotals() {
     let subtotal = parseFloat($('#cartSubtotal').text()) || 0;
     let discount = parseFloat($('#discount').val()) || 0;
     let taxRate = parseFloat($('#taxRate').val()) || 0;
-    
-    // Prevent discount larger than subtotal
-    if (discount > subtotal) discount = subtotal;
-    $('#discountAmount').text(discount.toFixed(2)); // ✅ update the display
 
-    // Subtotal after discount
+    if (discount > subtotal) discount = subtotal;
+    $('#discountAmount').text(discount.toFixed(2));
+
     let subtotalAfterDiscount = subtotal - discount;
     $('#subtotalafterdiscountAmount').text(subtotalAfterDiscount.toFixed(2));
 
-    // Tax applied on subtotal after discount
     let tax = subtotalAfterDiscount * (taxRate / 100);
     $('#taxAmount').text(tax.toFixed(2));
 
-    // Total
-    let total = subtotalAfterDiscount + tax;
-    $('#cartTotal').text(total.toFixed(2));
+    $('#cartTotal').text((subtotalAfterDiscount + tax).toFixed(2));
 }
 
-
-
+/* ====== VALIDATE PAYMENTS ====== */
 function validatePayments() {
-    let total = parseFloat($('#cartTotal').text()) || 0;
+    let status = $('input[name="payment_status"]:checked').val();
     let selected = $('.payment-check:checked');
+    let remarks = $('#paymentRemarks').val().trim();
     let valid = true;
-    let message = '';
 
-    if (selected.length === 0) {
-        valid = false;
-        message = 'Please select at least one payment method.';
-    }
-
-    // Remarks required if any payment selected
-    if (valid && selected.length > 0) {
-        const remarks = $('#paymentRemarks').val().trim();
-        if (!remarks) {
-            valid = false;
-            message = 'Please enter remarks for the payment.';
-        }
-    }
+    if (!remarks) valid = false;
+    if ((status === 'paid' || status === 'partially_paid') && selected.length === 0) valid = false;
 
     $('#checkoutBtn').prop('disabled', !valid || cart.length === 0);
-
-    if (!valid && message) console.warn(message);
-
     return valid;
 }
 
-// Revalidate when remarks change
-$('#paymentRemarks').on('input', validatePayments);
-
-
-
-
-
-/* ===============================
-   CUSTOMER SEARCH
-================================ */
+/* ====== CUSTOMER SEARCH & SELECT ====== */
 $('#customerSearch').on('keyup', function() {
     let q = $(this).val();
     if (!q) return $('#customerSuggestions').hide();
 
-    $.get("{{ route('user.customers.search') }}", {
-        q
-    }, function(res) {
+    $.get("{{ route('user.customers.search') }}", { q }, function(res) {
         let html = '';
         res.forEach(c => {
-            html += `
-                <div class="list-group-item customerSelect"
-                     data-customer='${JSON.stringify(c)}'>
-                    ${c.name} - ${c.phone}
-                </div>`;
+            html += `<div class="list-group-item customerSelect" data-customer='${JSON.stringify(c)}'>
+                        ${c.name} - ${c.phone}
+                     </div>`;
         });
         $('#customerSuggestions').html(html).show();
     });
 });
 
-
 $(document).on('click', '.customerSelect', function() {
-    let c = $(this).data('customer');
+    let c = JSON.parse($(this).attr('data-customer')); // ✅ FIX
 
-    // Set hidden inputs
     $('#customer_id').val(c.id);
     $('#customer_name').val(c.name);
     $('#customer_phone').val(c.phone);
     $('#customer_email').val(c.email);
     $('#customer_address').val(c.address);
 
-    // Show all details in grid
     $('#customerInfoDisplay').html(`
         <div class="customer-details-grid">
             <div class="customer-detail-item">
@@ -1018,53 +890,7 @@ $(document).on('click', '.customerSelect', function() {
     $('#customerSuggestions').hide();
 });
 
-
-
-function validateCustomerForm() {
-    let valid = true;
-
-    // Clear old errors
-    $('.error-name, .error-phone, .error-email, .error-address').text('');
-    $('#addCustomerForm input, #addCustomerForm textarea').removeClass('is-invalid');
-
-    let name = $('#modalCustomerName').val().trim();
-    let phone = $('#modalCustomerPhone').val().trim();
-    let email = $('#modalCustomerEmail').val().trim();
-
-    // Name
-    if (!name) {
-        $('.error-name').text('Customer name is required');
-        $('#modalCustomerName').addClass('is-invalid');
-        valid = false;
-    }
-
-    // Phone
-    if (!phone) {
-        $('.error-phone').text('Phone number is required');
-        $('#modalCustomerPhone').addClass('is-invalid');
-        valid = false;
-    } else if (phone.length < 6) {
-        $('.error-phone').text('Phone number is too short');
-        $('#modalCustomerPhone').addClass('is-invalid');
-        valid = false;
-    }
-
-    // Email (optional)
-    if (email) {
-        let emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            $('.error-email').text('Enter a valid email address');
-            $('#modalCustomerEmail').addClass('is-invalid');
-            valid = false;
-        }
-    }
-
-    return valid;
-}
-
-/* ===============================
-   ADD CUSTOMER
-================================ */
+/* ====== ADD CUSTOMER ====== */
 $('#addCustomerBtn').click(() => {
     $('#addCustomerForm')[0].reset();
     $('.text-danger').text('');
@@ -1072,52 +898,48 @@ $('#addCustomerBtn').click(() => {
     $('#addCustomerModal').modal('show');
 });
 
+function validateCustomerForm() {
+    let valid = true;
+    $('.error-name, .error-phone, .error-email, .error-address').text('');
+    $('#addCustomerForm input, #addCustomerForm textarea').removeClass('is-invalid');
 
-//customer form submitting 
+    let name = $('#modalCustomerName').val().trim();
+    let phone = $('#modalCustomerPhone').val().trim();
+    let email = $('#modalCustomerEmail').val().trim();
 
+    if (!name) { $('.error-name').text('Customer name is required'); $('#modalCustomerName').addClass('is-invalid'); valid = false; }
+    if (!phone) { $('.error-phone').text('Phone number is required'); $('#modalCustomerPhone').addClass('is-invalid'); valid = false; }
+    else if (!/^\d{10}$/.test(phone)) { $('.error-phone').text('Phone number must be exactly 10 digits'); $('#modalCustomerPhone').addClass('is-invalid'); valid = false; }
+    if (email) { if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { $('.error-email').text('Enter a valid email address'); $('#modalCustomerEmail').addClass('is-invalid'); valid = false; } }
+
+    return valid;
+}
 
 $('#addCustomerForm').submit(function(e) {
     e.preventDefault();
-
     if (!validateCustomerForm()) return;
 
     $.post("{{ route('user.customers.store') }}", $(this).serialize())
         .done(function(res) {
             if (res.success) {
                 let c = res.customer;
-
-                // Set hidden inputs
                 $('#customer_id').val(c.id);
                 $('#customer_name').val(c.name);
                 $('#customer_phone').val(c.phone);
                 $('#customer_email').val(c.email);
                 $('#customer_address').val(c.address);
 
-                // Show all details
                 $('#customerInfoDisplay').html(`
                     <div class="customer-details-grid">
-                        <div class="customer-detail-item">
-                            <div class="customer-detail-label">Name</div>
-                            <div class="customer-detail-value">${c.name}</div>
-                        </div>
-                        <div class="customer-detail-item">
-                            <div class="customer-detail-label">Phone</div>
-                            <div class="customer-detail-value">${c.phone}</div>
-                        </div>
-                        <div class="customer-detail-item">
-                            <div class="customer-detail-label">Email</div>
-                            <div class="customer-detail-value">${c.email ?? '<span class="empty">N/A</span>'}</div>
-                        </div>
-                        <div class="customer-detail-item">
-                            <div class="customer-detail-label">Address</div>
-                            <div class="customer-detail-value">${c.address ?? '<span class="empty">N/A</span>'}</div>
-                        </div>
+                        <div class="customer-detail-item"><div class="customer-detail-label">Name</div><div class="customer-detail-value">${c.name}</div></div>
+                        <div class="customer-detail-item"><div class="customer-detail-label">Phone</div><div class="customer-detail-value">${c.phone}</div></div>
+                        <div class="customer-detail-item"><div class="customer-detail-label">Email</div><div class="customer-detail-value">${c.email ?? '<span class="empty">N/A</span>'}</div></div>
+                        <div class="customer-detail-item"><div class="customer-detail-label">Address</div><div class="customer-detail-value">${c.address ?? '<span class="empty">N/A</span>'}</div></div>
                     </div>
                 `);
 
                 $('#customerDetailsForm').show();
                 $('#addCustomerModal').modal('hide');
-                $('#addCustomerForm')[0].reset();
             }
         })
         .fail(function(xhr) {
@@ -1135,57 +957,22 @@ $('#addCustomerForm').submit(function(e) {
         });
 });
 
+/* ====== CHECKOUT FORM ====== */
 $('#checkoutForm').on('submit', function (e) {
+    if (cart.length === 0) { e.preventDefault(); showError('Your cart is empty.'); return; }
+    if (!$('#customer_id').val()) { e.preventDefault(); showError('Please select a customer.'); return; }
+    if (!validatePayments()) { e.preventDefault(); return; }
+    if (!validatePaymentStatus()) { e.preventDefault(); return; }
 
-    if (cart.length === 0) {
-        e.preventDefault();
-        showError('Your cart is empty.');
-        return;
-    }
-
-    if (!$('#customer_id').val()) {
-        e.preventDefault();
-        showError('Please select a customer.');
-        return;
-    }
-
-    if (!validatePayments()) {
-        e.preventDefault();
-        return;
-    }
-
-    if (!validatePaymentStatus()) {
-        e.preventDefault();
-        return;
-    }
-
-    // collect payment methods
-    const selectedPayments = $('.payment-check:checked').map(function () {
-        return $(this).val();
-    }).get();
-
-    $('#paymentMethodInput').val(JSON.stringify(selectedPayments));
+    const selectedPayments = $('.payment-check:checked').map(function () { return $(this).val(); }).get();
+    $('#paymentMethodInput').val(selectedPayments.join(','));
     $('#paymentRemarksInput').val($('#paymentRemarks').val());
 });
 
-
-// Category filter
-$('#category').on('change', function () {
-    productTable.ajax.reload();
-});
-
-// Search input
-$('#productSearch').on('keyup', function () {
-    productTable.search(this.value).draw();
-});
-
-// Refresh button
-$('#refreshProductsBtn').on('click', function () {
-    productTable.ajax.reload();
-});
-
-
+/* ====== FILTERS ====== */
+$('#category').on('change', function () { productTable.ajax.reload(); });
+$('#productSearch').on('keyup', function () { productTable.search(this.value).draw(); });
+$('#refreshProductsBtn').on('click', function () { productTable.ajax.reload(); });
 
 </script>
-
 @endpush
